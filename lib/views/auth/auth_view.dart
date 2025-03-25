@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:maker_greenhouse/providers/auth_notifier.dart';
 import 'package:maker_greenhouse/shared/loading_indicator.dart';
+import 'package:maker_greenhouse/views/error/error_view.dart';
 
 enum AuthMode { signIn, signUp }
 
@@ -58,16 +60,18 @@ class AuthModeChooser extends StatelessWidget {
 class SignInForm extends ConsumerWidget {
   final bool staySignedIn;
   final ValueChanged<bool> onStaySignedInChanged;
-  final VoidCallback onSignIn;
+  final Future<void> Function() onSignIn;
   final _formKey = GlobalKey<FormBuilderState>();
-  final _emailFieldKey = GlobalKey<FormBuilderFieldState>();
-  final _passwordFieldKey = GlobalKey<FormBuilderFieldState>();
+  final GlobalKey<FormBuilderFieldState> usernameFieldKey;
+  final GlobalKey<FormBuilderFieldState> passwordFieldKey;
 
   SignInForm({
     Key? key,
     required this.staySignedIn,
     required this.onStaySignedInChanged,
     required this.onSignIn,
+    required this.usernameFieldKey,
+    required this.passwordFieldKey,
   }) : super(key: key);
 
   @override
@@ -77,21 +81,20 @@ class SignInForm extends ConsumerWidget {
       child: Column(
         children: [
           FormBuilderTextField(
-            key: _emailFieldKey,
-            name: 'signInEmail',
+            key: usernameFieldKey,
+            name: 'signInUsername',
             decoration: const InputDecoration(
-              hintText: 'Email',
+              hintText: 'Username',
             ),
             validator: FormBuilderValidators.compose(
               [
-                FormBuilderValidators.email(errorText: "Invalid email format"),
                 FormBuilderValidators.required(
                     errorText: "This field cannot be empty"),
               ],
             ),
           ),
           FormBuilderTextField(
-            key: _passwordFieldKey,
+            key: passwordFieldKey,
             name: "signInPassword",
             decoration: const InputDecoration(
               hintText: 'Password',
@@ -103,38 +106,63 @@ class SignInForm extends ConsumerWidget {
           const SizedBox(
             height: 10,
           ),
-          Consumer(
-            builder: (context, ref, child) {
-              final authState = ref.watch(loadingState);
-              return authState == false
-                  ? ElevatedButton(
-                      onPressed: () {
-                        _formKey.currentState?.validate();
-                        if (_formKey.currentState?.isValid == true) {
-                          onSignIn();
-                        }
-                      },
-                      child: const Text("sign in"))
-                  : const LoadingIndicatorWidget();
-            },
-          )
+          AuthButton(formKey: _formKey, onPressed: onSignIn, text: "sign in"),
         ],
       ),
     );
   }
 }
 
+class AuthButton extends ConsumerWidget {
+  const AuthButton(
+      {super.key,
+      required GlobalKey<FormBuilderState> formKey,
+      required this.onPressed,
+      required this.text})
+      : _formKey = formKey;
+
+  final GlobalKey<FormBuilderState> _formKey;
+  final Future<void> Function() onPressed;
+  final String text;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authNotifierProvider);
+    return authState.when(data: (_) {
+      return ElevatedButton(
+        onPressed: () {
+          _formKey.currentState?.validate();
+          if (_formKey.currentState?.isValid == true) {
+            onPressed();
+          }
+        },
+        child: Text(text),
+      );
+    }, error: (error, stackTrace) {
+      return ErrorScreen(
+          error: error,
+          onRetry: () {
+            ref.invalidate(authNotifierProvider);
+          });
+    }, loading: () {
+      return LoadingIndicatorWidget();
+    });
+  }
+}
+
 class SignUpForm extends StatelessWidget {
-  final VoidCallback onSignUp;
+  final Future<void> Function() onSignUp;
   final _formKey = GlobalKey<FormBuilderState>();
-  final _emailFieldKey = GlobalKey<FormBuilderFieldState>();
-  final _passwordFieldKey = GlobalKey<FormBuilderFieldState>();
-  final _passwordConfirmationFieldKey = GlobalKey<FormBuilderFieldState>();
-  final _usernameFieldKey = GlobalKey<FormBuilderFieldState>();
+  final GlobalKey<FormBuilderFieldState> passwordFieldKey;
+  GlobalKey<FormBuilderFieldState> passwordConfirmationFieldKey;
+  GlobalKey<FormBuilderFieldState> usernameFieldKey;
 
   SignUpForm({
     Key? key,
     required this.onSignUp,
+    required this.passwordFieldKey,
+    required this.passwordConfirmationFieldKey,
+    required this.usernameFieldKey,
   }) : super(key: key);
 
   @override
@@ -144,7 +172,7 @@ class SignUpForm extends StatelessWidget {
       child: Column(
         children: [
           FormBuilderTextField(
-            key: _usernameFieldKey,
+            key: usernameFieldKey,
             name: 'signUpUsername',
             decoration: const InputDecoration(
               hintText: 'Username',
@@ -157,21 +185,7 @@ class SignUpForm extends StatelessWidget {
             ),
           ),
           FormBuilderTextField(
-            key: _emailFieldKey,
-            name: 'signUpEmail',
-            decoration: const InputDecoration(
-              hintText: 'Email',
-            ),
-            validator: FormBuilderValidators.compose(
-              [
-                FormBuilderValidators.email(errorText: "Invalid email format"),
-                FormBuilderValidators.required(
-                    errorText: "This field cannot be empty"),
-              ],
-            ),
-          ),
-          FormBuilderTextField(
-            key: _passwordFieldKey,
+            key: passwordFieldKey,
             name: "signUpPassword",
             initialValue: "",
             decoration: const InputDecoration(
@@ -194,7 +208,7 @@ class SignUpForm extends StatelessWidget {
             obscureText: true,
           ),
           FormBuilderTextField(
-            key: _passwordConfirmationFieldKey,
+            key: passwordConfirmationFieldKey,
             name: "signUpPasswordConfirmation",
             initialValue: "",
             decoration: const InputDecoration(
@@ -211,21 +225,7 @@ class SignUpForm extends StatelessWidget {
           const SizedBox(
             height: 10,
           ),
-          Consumer(
-            builder: (context, ref, child) {
-              final authState = ref.watch(loadingState);
-              return authState == false
-                  ? ElevatedButton(
-                      onPressed: () {
-                        _formKey.currentState?.validate();
-                        if (_formKey.currentState?.isValid == true) {
-                          onSignUp();
-                        }
-                      },
-                      child: const Text("sign up"))
-                  : const LoadingIndicatorWidget();
-            },
-          )
+          AuthButton(formKey: _formKey, onPressed: onSignUp, text: "sign up"),
         ],
       ),
     );
@@ -249,6 +249,12 @@ class _AuthViewState extends ConsumerState<AuthView> {
   }
 
   bool _staySignedIn = false;
+  final _signInUsernameFieldKey = GlobalKey<FormBuilderFieldState>();
+  final _signInPasswordFieldKey = GlobalKey<FormBuilderFieldState>();
+  final _signUpUsernameFieldKey = GlobalKey<FormBuilderFieldState>();
+  final _signUpPasswordFieldKey = GlobalKey<FormBuilderFieldState>();
+  final _signUpPasswordConfirmationFieldKey =
+      GlobalKey<FormBuilderFieldState>();
 
   @override
   Widget build(BuildContext context) {
@@ -262,20 +268,26 @@ class _AuthViewState extends ConsumerState<AuthView> {
           width: width * 0.6,
           child: authMode == AuthMode.signIn
               ? SignInForm(
+                  usernameFieldKey: _signInUsernameFieldKey,
+                  passwordFieldKey: _signInPasswordFieldKey,
                   staySignedIn: _staySignedIn,
                   onStaySignedInChanged: (value) {
                     setState(() {
                       _staySignedIn = value;
                     });
                   },
-                  onSignIn: () {
-                    ref.read(loadingState.notifier).state = true;
+                  onSignIn: () async {
+                    ref.read(authNotifierProvider.notifier).login(
+                        _signInUsernameFieldKey.currentState?.value,
+                        _signInPasswordFieldKey.currentState?.value);
                   },
                 )
               : SignUpForm(
-                  onSignUp: () {
-                    ref.read(loadingState.notifier).state = true;
-                  },
+                  usernameFieldKey: _signUpUsernameFieldKey,
+                  passwordFieldKey: _signUpPasswordFieldKey,
+                  passwordConfirmationFieldKey:
+                      _signUpPasswordConfirmationFieldKey,
+                  onSignUp: () async {},
                 ),
         ),
       ],

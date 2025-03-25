@@ -29,7 +29,7 @@ class AuthNotifier extends _$AuthNotifier {
             body: {'username': username, 'password': password},
             requireAuth: false,
           );
-      String? token = response.headers['Authorization'];
+      String? token = response.headers['authorization'];
       if (token == null) {
         throw Exception("Auth returned null token, contact support");
       } else {
@@ -37,6 +37,7 @@ class AuthNotifier extends _$AuthNotifier {
         state = AsyncValue.data(User.fromJson(jsonDecode(response.body)));
       }
     } catch (e) {
+      ///TODO: exception handling
       debugPrint("WSZEDLEM TUTAJ");
       state = AsyncValue.error(e, StackTrace.current);
     }

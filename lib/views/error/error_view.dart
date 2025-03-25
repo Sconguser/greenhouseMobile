@@ -4,74 +4,43 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 class ErrorScreen extends StatelessWidget {
-  final dynamic error;
+  const ErrorScreen({super.key, required this.error, required this.onRetry});
+  final Object error;
   final VoidCallback onRetry;
-
-  const ErrorScreen({
-    required this.error,
-    required this.onRetry,
-    super.key,
-  });
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
+      child: ConstrainedBox(
+        // Constrain to 80% of available height to prevent overflow
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+          maxWidth: 600, // Optional: Limit width for larger screens
+        ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize:
+              MainAxisSize.min, // Collapse vertically if content is small
           children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-            const SizedBox(height: 20),
-            Text(
-              _getUserFriendlyMessage(error),
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
+            const Icon(Icons.error_outline, size: 48),
+            const SizedBox(height: 16),
+            // Flexible text to avoid overflow
+            Flexible(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Text(
+                  error.toString(),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
             ),
-            const SizedBox(height: 15),
-            Text(
-              _getTechnicalDetails(error),
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 25),
-            FilledButton.tonal(
+            const SizedBox(height: 16),
+            ElevatedButton(
               onPressed: onRetry,
-              child: const Text("Spróbuj ponownie"),
-            ),
-            TextButton(
-              onPressed: () => _showErrorDetails(context, error),
-              child: const Text("Szczegóły błędu"),
+              child: const Text('Retry'),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  String _getUserFriendlyMessage(dynamic error) {
-    if (error is SocketException) return "Brak połączenia z internetem";
-    if (error is TimeoutException) return "Przekroczono czas oczekiwania";
-    if (error is HttpException) return "Błąd serwera: ${error.message}";
-    return "Coś poszło nie tak";
-  }
-
-  String _getTechnicalDetails(dynamic error) {
-    return error.toString().replaceAll("Exception: ", "");
-  }
-
-  void _showErrorDetails(BuildContext context, dynamic error) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Szczegóły błędu"),
-        content: SelectableText(error.toString()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
-          ),
-        ],
       ),
     );
   }

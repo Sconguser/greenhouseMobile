@@ -127,6 +127,7 @@ class AuthButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    double height = MediaQuery.of(context).size.height;
     final authState = ref.watch(authNotifierProvider);
     return authState.when(data: (_) {
       return ElevatedButton(
@@ -139,11 +140,19 @@ class AuthButton extends ConsumerWidget {
         child: Text(text),
       );
     }, error: (error, stackTrace) {
-      return ErrorScreen(
-          error: error,
-          onRetry: () {
-            ref.invalidate(authNotifierProvider);
-          });
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom +
+              16, // Add keyboard height + extra spacing
+        ),
+        child: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: ErrorScreen(
+            error: error,
+            onRetry: () => ref.invalidate(authNotifierProvider),
+          ),
+        ),
+      );
     }, loading: () {
       return LoadingIndicatorWidget();
     });

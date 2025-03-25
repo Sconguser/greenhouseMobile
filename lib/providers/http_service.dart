@@ -30,13 +30,14 @@ class HttpService {
       final uri = _buildUri(endpoint, queryParams);
 
       final headers = await _buildHeaders(requireAuth);
+      final config = _ref.read(httpConfigProvider);
 
       final response = await _executeRequest(
-        method: method,
-        uri: uri,
-        headers: headers,
-        body: body,
-      );
+          method: method,
+          uri: uri,
+          headers: headers,
+          body: body,
+          timeout: config.timeout);
 
       return _handleResponse(response);
     } catch (e) {
@@ -77,20 +78,27 @@ class HttpService {
     required Uri uri,
     required Map<String, String> headers,
     Map<String, dynamic>? body,
+    Duration timeout = const Duration(seconds: 30),
   }) {
     final bodyJson = body != null ? jsonEncode(body) : null;
 
     switch (method) {
       case HttpMethod.get:
-        return _client.get(uri, headers: headers);
+        return _client.get(uri, headers: headers).timeout(timeout);
       case HttpMethod.post:
-        return _client.post(uri, headers: headers, body: bodyJson);
+        return _client
+            .post(uri, headers: headers, body: bodyJson)
+            .timeout(timeout);
       case HttpMethod.put:
-        return _client.put(uri, headers: headers, body: bodyJson);
+        return _client
+            .put(uri, headers: headers, body: bodyJson)
+            .timeout(timeout);
       case HttpMethod.patch:
-        return _client.patch(uri, headers: headers, body: bodyJson);
+        return _client
+            .patch(uri, headers: headers, body: bodyJson)
+            .timeout(timeout);
       case HttpMethod.delete:
-        return _client.delete(uri, headers: headers);
+        return _client.delete(uri, headers: headers).timeout(timeout);
     }
   }
 

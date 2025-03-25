@@ -6,8 +6,8 @@ part 'http_conf.g.dart';
 class HttpConfig extends _$HttpConfig {
   @override
   HttpConfigModel build() => HttpConfigModel(
-        baseUrl: 'localhost:8080',
-        timeout: const Duration(seconds: 30),
+        baseUrl: '192.168.0.194:8080',
+        timeout: const Duration(seconds: 20),
         useHttps: false,
       );
 }

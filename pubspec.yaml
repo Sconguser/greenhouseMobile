@@ -44,6 +44,8 @@ dependencies:
   json_annotation: ^4.9.0
   flutter_form_builder: ^9.2.1
   form_builder_validators: ^9.1.0
+  sleek_circular_slider: ^2.0.1
+  loading_indicator: ^3.1.1
 
 dev_dependencies:
   flutter_test:

@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:maker_greenhouse/shared/loading_indicator.dart';
 
 enum AuthMode { signIn, signUp }
+
+final loadingState = StateProvider<bool>((ref) {
+  return false;
+});
 
 class AuthModeChooser extends StatelessWidget {
   final AuthMode authMode;
@@ -32,7 +37,7 @@ class AuthModeChooser extends StatelessWidget {
             ),
           ),
         ),
-        Text(" / "),
+        const Text(" / "),
         TextButton(
           onPressed: () => onModeChanged(AuthMode.signUp),
           child: Text(
@@ -50,7 +55,7 @@ class AuthModeChooser extends StatelessWidget {
   }
 }
 
-class SignInForm extends StatelessWidget {
+class SignInForm extends ConsumerWidget {
   final bool staySignedIn;
   final ValueChanged<bool> onStaySignedInChanged;
   final VoidCallback onSignIn;
@@ -66,7 +71,7 @@ class SignInForm extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return FormBuilder(
       key: _formKey,
       child: Column(
@@ -74,7 +79,7 @@ class SignInForm extends StatelessWidget {
           FormBuilderTextField(
             key: _emailFieldKey,
             name: 'signInEmail',
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               hintText: 'Email',
             ),
             validator: FormBuilderValidators.compose(
@@ -88,18 +93,31 @@ class SignInForm extends StatelessWidget {
           FormBuilderTextField(
             key: _passwordFieldKey,
             name: "signInPassword",
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               hintText: 'Password',
             ),
             validator: FormBuilderValidators.required(
                 errorText: "This field cannot be empty"),
             obscureText: true,
           ),
-          ElevatedButton(
-              onPressed: () {
-                print(_emailFieldKey.currentState?.value);
-              },
-              child: Text("sign in"))
+          const SizedBox(
+            height: 10,
+          ),
+          Consumer(
+            builder: (context, ref, child) {
+              final authState = ref.watch(loadingState);
+              return authState == false
+                  ? ElevatedButton(
+                      onPressed: () {
+                        _formKey.currentState?.validate();
+                        if (_formKey.currentState?.isValid == true) {
+                          onSignIn();
+                        }
+                      },
+                      child: const Text("sign in"))
+                  : const LoadingIndicatorWidget();
+            },
+          )
         ],
       ),
     );
@@ -128,7 +146,7 @@ class SignUpForm extends StatelessWidget {
           FormBuilderTextField(
             key: _usernameFieldKey,
             name: 'signUpUsername',
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               hintText: 'Username',
             ),
             validator: FormBuilderValidators.compose(
@@ -141,7 +159,7 @@ class SignUpForm extends StatelessWidget {
           FormBuilderTextField(
             key: _emailFieldKey,
             name: 'signUpEmail',
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               hintText: 'Email',
             ),
             validator: FormBuilderValidators.compose(
@@ -155,7 +173,8 @@ class SignUpForm extends StatelessWidget {
           FormBuilderTextField(
             key: _passwordFieldKey,
             name: "signUpPassword",
-            decoration: InputDecoration(
+            initialValue: "",
+            decoration: const InputDecoration(
               hintText: 'Password',
             ),
             validator: FormBuilderValidators.compose(
@@ -177,23 +196,36 @@ class SignUpForm extends StatelessWidget {
           FormBuilderTextField(
             key: _passwordConfirmationFieldKey,
             name: "signUpPasswordConfirmation",
-            decoration: InputDecoration(
+            initialValue: "",
+            decoration: const InputDecoration(
               hintText: 'Confirm password',
             ),
 
             //TODO: to nie dziala, do poprawy
-            validator: FormBuilderValidators.equal(
-                _passwordFieldKey.currentState?.value ?? '',
-                errorText: "Passwords must match"),
+            validator: FormBuilderValidators.required(
+                errorText:
+                    "Passwords must match // this does not work correctly"),
             obscureText: true,
             autovalidateMode: AutovalidateMode.onUserInteraction,
           ),
-          ElevatedButton(
-              onPressed: () {
-                print(_emailFieldKey.currentState?.value);
-                _formKey.currentState?.validate();
-              },
-              child: Text("sign up"))
+          const SizedBox(
+            height: 10,
+          ),
+          Consumer(
+            builder: (context, ref, child) {
+              final authState = ref.watch(loadingState);
+              return authState == false
+                  ? ElevatedButton(
+                      onPressed: () {
+                        _formKey.currentState?.validate();
+                        if (_formKey.currentState?.isValid == true) {
+                          onSignUp();
+                        }
+                      },
+                      child: const Text("sign up"))
+                  : const LoadingIndicatorWidget();
+            },
+          )
         ],
       ),
     );
@@ -236,10 +268,14 @@ class _AuthViewState extends ConsumerState<AuthView> {
                       _staySignedIn = value;
                     });
                   },
-                  onSignIn: () {},
+                  onSignIn: () {
+                    ref.read(loadingState.notifier).state = true;
+                  },
                 )
               : SignUpForm(
-                  onSignUp: () {},
+                  onSignUp: () {
+                    ref.read(loadingState.notifier).state = true;
+                  },
                 ),
         ),
       ],

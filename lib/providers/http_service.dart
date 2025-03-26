@@ -11,6 +11,7 @@ import 'http_conf.dart';
 
 part 'http_service.g.dart';
 
+///TODO: refactor
 @riverpod
 HttpService httpService(HttpServiceRef ref) => HttpService(ref);
 

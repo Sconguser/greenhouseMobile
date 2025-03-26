@@ -7,7 +7,7 @@ class HttpConfig extends _$HttpConfig {
   @override
   HttpConfigModel build() => HttpConfigModel(
         ///TODO: czytac to z pliku
-        baseUrl: '192.168.0.194:8080',
+        baseUrl: '10.85.51.10:8080',
         timeout: const Duration(seconds: 5),
         useHttps: false,
       );

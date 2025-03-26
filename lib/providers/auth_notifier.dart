@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
 import 'package:maker_greenhouse/providers/http_service.dart';
+import 'package:maker_greenhouse/providers/routes.dart';
 import 'package:maker_greenhouse/providers/secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -31,18 +32,21 @@ class AuthNotifier extends _$AuthNotifier {
       Response response = await ref.read(httpServiceProvider).request(
             method: HttpMethod.post,
             endpoint: 'auth/login',
-            body: {'username': username, 'password': password},
+            body: {
+              'username': username,
+              'password': password,
+            },
             requireAuth: false,
           );
       String? token = response.headers['authorization'];
       if (token == null) {
         throw Exception("Auth returned null token, contact support");
-      } else {
-        ref
-            .read(secureStorageProvider)
-            .write(key: KEYS.jwtToken.name, value: token);
-        state = AsyncValue.data(User.fromJson(jsonDecode(response.body)));
       }
+      ref
+          .read(secureStorageProvider)
+          .write(key: KEYS.jwtToken.name, value: token);
+      state = AsyncValue.data(User.fromJson(jsonDecode(response.body)));
+      // ref.read(goRouterProvider).goNamed(AppRoutes.home.path);
     } catch (e) {
       ///TODO: exception handling
       debugPrint("Error with signin");
@@ -78,5 +82,11 @@ class AuthNotifier extends _$AuthNotifier {
       state = AsyncValue.error(e, StackTrace.current);
       return null;
     }
+  }
+
+  Future<void> logout() async {
+    await ref.read(secureStorageProvider.notifier).delete(KEYS.jwtToken.name);
+    ref.invalidateSelf();
+    ref.read(goRouterProvider).goNamed(AppRoutes.login.path);
   }
 }

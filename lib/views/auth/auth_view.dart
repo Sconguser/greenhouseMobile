@@ -269,37 +269,43 @@ class _AuthViewState extends ConsumerState<AuthView> {
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        AuthModeChooser(authMode: authMode, onModeChanged: toggleAuthMode),
-        Container(
-          width: width * 0.6,
-          child: authMode == AuthMode.signIn
-              ? SignInForm(
-                  usernameFieldKey: _signInUsernameFieldKey,
-                  passwordFieldKey: _signInPasswordFieldKey,
-                  staySignedIn: _staySignedIn,
-                  onStaySignedInChanged: (value) {
-                    setState(() {
-                      _staySignedIn = value;
-                    });
-                  },
-                  onSignIn: () async {
-                    ref.read(authNotifierProvider.notifier).login(
-                        _signInUsernameFieldKey.currentState?.value,
-                        _signInPasswordFieldKey.currentState?.value);
-                  },
-                )
-              : SignUpForm(
-                  usernameFieldKey: _signUpUsernameFieldKey,
-                  passwordFieldKey: _signUpPasswordFieldKey,
-                  passwordConfirmationFieldKey:
-                      _signUpPasswordConfirmationFieldKey,
-                  onSignUp: () async {},
-                ),
-        ),
-      ],
+    return Scaffold(
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AuthModeChooser(authMode: authMode, onModeChanged: toggleAuthMode),
+          Container(
+            width: width * 0.6,
+            child: authMode == AuthMode.signIn
+                ? SignInForm(
+                    usernameFieldKey: _signInUsernameFieldKey,
+                    passwordFieldKey: _signInPasswordFieldKey,
+                    staySignedIn: _staySignedIn,
+                    onStaySignedInChanged: (value) {
+                      setState(() {
+                        _staySignedIn = value;
+                      });
+                    },
+                    onSignIn: () async {
+                      ref.read(authNotifierProvider.notifier).login(
+                          _signInUsernameFieldKey.currentState?.value,
+                          _signInPasswordFieldKey.currentState?.value);
+                    },
+                  )
+                : SignUpForm(
+                    usernameFieldKey: _signUpUsernameFieldKey,
+                    passwordFieldKey: _signUpPasswordFieldKey,
+                    passwordConfirmationFieldKey:
+                        _signUpPasswordConfirmationFieldKey,
+                    onSignUp: () async {
+                      ref.read(authNotifierProvider.notifier).signUp(
+                          _signUpUsernameFieldKey.currentState?.value,
+                          _signUpPasswordFieldKey.currentState?.value);
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -3,6 +3,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'secure_storage.g.dart';
 
+enum KEYS { jwtToken }
+
 @riverpod
 class SecureStorage extends _$SecureStorage {
   @override

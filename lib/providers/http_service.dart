@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:maker_greenhouse/providers/secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'http_conf.dart';
@@ -65,9 +66,13 @@ class HttpService {
     };
 
     if (requireAuth) {
-      // final token = await _ref.read(authProvider.future);
-      String token = "aa";
-      headers['Authorization'] = 'Bearer $token';
+      String? token = await _ref
+          .read(secureStorageProvider.notifier)
+          .read(KEYS.jwtToken.name);
+      if (token == null) {
+        throw Exception("Authorization token was not present");
+      }
+      headers['Authorization'] = token;
     }
 
     return headers;

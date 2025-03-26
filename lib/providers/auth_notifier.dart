@@ -17,12 +17,16 @@ class AuthNotifier extends _$AuthNotifier {
 
   @override
   Future<User?> build() async {
-    // return _loadPersistedToken();
+    if (await ref.read(secureStorageProvider.notifier).read(tokenKey) != null) {
+      return _autoLogin();
+    }
+    return null;
   }
 
   Future<void> login(String username, String password) async {
     state = const AsyncValue.loading();
     try {
+      ref.read(secureStorageProvider).delete(key: tokenKey);
       Response response = await ref.read(httpServiceProvider).request(
             method: HttpMethod.post,
             endpoint: 'auth/login',
@@ -38,8 +42,38 @@ class AuthNotifier extends _$AuthNotifier {
       }
     } catch (e) {
       ///TODO: exception handling
-      debugPrint("WSZEDLEM TUTAJ");
+      debugPrint("Error with signin");
       state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
+  Future<void> signUp(String username, String password) async {
+    state = const AsyncValue.loading();
+    try {
+      ref.read(secureStorageProvider).delete(key: tokenKey);
+      await ref.read(httpServiceProvider).request(
+          method: HttpMethod.post,
+          endpoint: '/auth/register',
+          body: {"username": username, "password": password},
+          requireAuth: false);
+      ref.invalidateSelf();
+    } catch (e) {
+      ///TODO: exception handling when exception is nothing serious
+      debugPrint("Error with signup");
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
+  Future<User?> _autoLogin() async {
+    state = const AsyncValue.loading();
+    try {
+      Response response = await ref.read(httpServiceProvider).request(
+          method: HttpMethod.get, endpoint: 'auth/verify', requireAuth: true);
+      return User.fromJson(jsonDecode(response.body));
+    } catch (e) {
+      ref.read(secureStorageProvider).delete(key: tokenKey);
+      state = AsyncValue.error(e, StackTrace.current);
+      return null;
     }
   }
 }

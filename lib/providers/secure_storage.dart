@@ -6,7 +6,7 @@ part 'secure_storage.g.dart';
 @riverpod
 class SecureStorage extends _$SecureStorage {
   @override
-  FlutterSecureStorage build() => FlutterSecureStorage();
+  FlutterSecureStorage build() => const FlutterSecureStorage();
 
   Future<void> write(String key, String value) async {
     await state.write(key: key, value: value);

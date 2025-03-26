@@ -7,22 +7,26 @@ part of 'plant_model.dart';
 // **************************************************************************
 
 _$PlantImpl _$$PlantImplFromJson(Map<String, dynamic> json) => _$PlantImpl(
-      id: (json['id'] as num).toInt(),
       name: json['name'] as String,
       description: json['description'] as String,
-      special_needs: json['special_needs'] as String,
-      required_temperature: json['required_temperature'] as String,
-      required_humidity: json['required_humidity'] as String,
-      image_url: json['image_url'] as String?,
+      minTemperature: (json['minTemperature'] as num).toInt(),
+      maxTemperature: (json['maxTemperature'] as num).toInt(),
+      minHumidity: (json['minHumidity'] as num).toInt(),
+      maxHumidity: (json['maxHumidity'] as num).toInt(),
+      minSoilHumidity: (json['minSoilHumidity'] as num).toInt(),
+      maxSoilHumidity: (json['maxSoilHumidity'] as num).toInt(),
+      imageData: json['imageData'] as String?,
     );
 
 Map<String, dynamic> _$$PlantImplToJson(_$PlantImpl instance) =>
     <String, dynamic>{
-      'id': instance.id,
       'name': instance.name,
       'description': instance.description,
-      'special_needs': instance.special_needs,
-      'required_temperature': instance.required_temperature,
-      'required_humidity': instance.required_humidity,
-      'image_url': instance.image_url,
+      'minTemperature': instance.minTemperature,
+      'maxTemperature': instance.maxTemperature,
+      'minHumidity': instance.minHumidity,
+      'maxHumidity': instance.maxHumidity,
+      'minSoilHumidity': instance.minSoilHumidity,
+      'maxSoilHumidity': instance.maxSoilHumidity,
+      'imageData': instance.imageData,
     };

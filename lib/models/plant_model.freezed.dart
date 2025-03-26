@@ -20,13 +20,15 @@ Plant _$PlantFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$Plant {
-  int get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
   String get description => throw _privateConstructorUsedError;
-  String get special_needs => throw _privateConstructorUsedError;
-  String get required_temperature => throw _privateConstructorUsedError;
-  String get required_humidity => throw _privateConstructorUsedError;
-  String? get image_url => throw _privateConstructorUsedError;
+  int get minTemperature => throw _privateConstructorUsedError;
+  int get maxTemperature => throw _privateConstructorUsedError;
+  int get minHumidity => throw _privateConstructorUsedError;
+  int get maxHumidity => throw _privateConstructorUsedError;
+  int get minSoilHumidity => throw _privateConstructorUsedError;
+  int get maxSoilHumidity => throw _privateConstructorUsedError;
+  String? get imageData => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -39,13 +41,15 @@ abstract class $PlantCopyWith<$Res> {
       _$PlantCopyWithImpl<$Res, Plant>;
   @useResult
   $Res call(
-      {int id,
-      String name,
+      {String name,
       String description,
-      String special_needs,
-      String required_temperature,
-      String required_humidity,
-      String? image_url});
+      int minTemperature,
+      int maxTemperature,
+      int minHumidity,
+      int maxHumidity,
+      int minSoilHumidity,
+      int maxSoilHumidity,
+      String? imageData});
 }
 
 /// @nodoc
@@ -61,19 +65,17 @@ class _$PlantCopyWithImpl<$Res, $Val extends Plant>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? id = null,
     Object? name = null,
     Object? description = null,
-    Object? special_needs = null,
-    Object? required_temperature = null,
-    Object? required_humidity = null,
-    Object? image_url = freezed,
+    Object? minTemperature = null,
+    Object? maxTemperature = null,
+    Object? minHumidity = null,
+    Object? maxHumidity = null,
+    Object? minSoilHumidity = null,
+    Object? maxSoilHumidity = null,
+    Object? imageData = freezed,
   }) {
     return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as int,
       name: null == name
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
@@ -82,21 +84,33 @@ class _$PlantCopyWithImpl<$Res, $Val extends Plant>
           ? _value.description
           : description // ignore: cast_nullable_to_non_nullable
               as String,
-      special_needs: null == special_needs
-          ? _value.special_needs
-          : special_needs // ignore: cast_nullable_to_non_nullable
-              as String,
-      required_temperature: null == required_temperature
-          ? _value.required_temperature
-          : required_temperature // ignore: cast_nullable_to_non_nullable
-              as String,
-      required_humidity: null == required_humidity
-          ? _value.required_humidity
-          : required_humidity // ignore: cast_nullable_to_non_nullable
-              as String,
-      image_url: freezed == image_url
-          ? _value.image_url
-          : image_url // ignore: cast_nullable_to_non_nullable
+      minTemperature: null == minTemperature
+          ? _value.minTemperature
+          : minTemperature // ignore: cast_nullable_to_non_nullable
+              as int,
+      maxTemperature: null == maxTemperature
+          ? _value.maxTemperature
+          : maxTemperature // ignore: cast_nullable_to_non_nullable
+              as int,
+      minHumidity: null == minHumidity
+          ? _value.minHumidity
+          : minHumidity // ignore: cast_nullable_to_non_nullable
+              as int,
+      maxHumidity: null == maxHumidity
+          ? _value.maxHumidity
+          : maxHumidity // ignore: cast_nullable_to_non_nullable
+              as int,
+      minSoilHumidity: null == minSoilHumidity
+          ? _value.minSoilHumidity
+          : minSoilHumidity // ignore: cast_nullable_to_non_nullable
+              as int,
+      maxSoilHumidity: null == maxSoilHumidity
+          ? _value.maxSoilHumidity
+          : maxSoilHumidity // ignore: cast_nullable_to_non_nullable
+              as int,
+      imageData: freezed == imageData
+          ? _value.imageData
+          : imageData // ignore: cast_nullable_to_non_nullable
               as String?,
     ) as $Val);
   }
@@ -110,13 +124,15 @@ abstract class _$$PlantImplCopyWith<$Res> implements $PlantCopyWith<$Res> {
   @override
   @useResult
   $Res call(
-      {int id,
-      String name,
+      {String name,
       String description,
-      String special_needs,
-      String required_temperature,
-      String required_humidity,
-      String? image_url});
+      int minTemperature,
+      int maxTemperature,
+      int minHumidity,
+      int maxHumidity,
+      int minSoilHumidity,
+      int maxSoilHumidity,
+      String? imageData});
 }
 
 /// @nodoc
@@ -130,19 +146,17 @@ class __$$PlantImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? id = null,
     Object? name = null,
     Object? description = null,
-    Object? special_needs = null,
-    Object? required_temperature = null,
-    Object? required_humidity = null,
-    Object? image_url = freezed,
+    Object? minTemperature = null,
+    Object? maxTemperature = null,
+    Object? minHumidity = null,
+    Object? maxHumidity = null,
+    Object? minSoilHumidity = null,
+    Object? maxSoilHumidity = null,
+    Object? imageData = freezed,
   }) {
     return _then(_$PlantImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as int,
       name: null == name
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
@@ -151,21 +165,33 @@ class __$$PlantImplCopyWithImpl<$Res>
           ? _value.description
           : description // ignore: cast_nullable_to_non_nullable
               as String,
-      special_needs: null == special_needs
-          ? _value.special_needs
-          : special_needs // ignore: cast_nullable_to_non_nullable
-              as String,
-      required_temperature: null == required_temperature
-          ? _value.required_temperature
-          : required_temperature // ignore: cast_nullable_to_non_nullable
-              as String,
-      required_humidity: null == required_humidity
-          ? _value.required_humidity
-          : required_humidity // ignore: cast_nullable_to_non_nullable
-              as String,
-      image_url: freezed == image_url
-          ? _value.image_url
-          : image_url // ignore: cast_nullable_to_non_nullable
+      minTemperature: null == minTemperature
+          ? _value.minTemperature
+          : minTemperature // ignore: cast_nullable_to_non_nullable
+              as int,
+      maxTemperature: null == maxTemperature
+          ? _value.maxTemperature
+          : maxTemperature // ignore: cast_nullable_to_non_nullable
+              as int,
+      minHumidity: null == minHumidity
+          ? _value.minHumidity
+          : minHumidity // ignore: cast_nullable_to_non_nullable
+              as int,
+      maxHumidity: null == maxHumidity
+          ? _value.maxHumidity
+          : maxHumidity // ignore: cast_nullable_to_non_nullable
+              as int,
+      minSoilHumidity: null == minSoilHumidity
+          ? _value.minSoilHumidity
+          : minSoilHumidity // ignore: cast_nullable_to_non_nullable
+              as int,
+      maxSoilHumidity: null == maxSoilHumidity
+          ? _value.maxSoilHumidity
+          : maxSoilHumidity // ignore: cast_nullable_to_non_nullable
+              as int,
+      imageData: freezed == imageData
+          ? _value.imageData
+          : imageData // ignore: cast_nullable_to_non_nullable
               as String?,
     ));
   }
@@ -175,35 +201,41 @@ class __$$PlantImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$PlantImpl implements _Plant {
   _$PlantImpl(
-      {required this.id,
-      required this.name,
+      {required this.name,
       required this.description,
-      required this.special_needs,
-      required this.required_temperature,
-      required this.required_humidity,
-      this.image_url});
+      required this.minTemperature,
+      required this.maxTemperature,
+      required this.minHumidity,
+      required this.maxHumidity,
+      required this.minSoilHumidity,
+      required this.maxSoilHumidity,
+      this.imageData});
 
   factory _$PlantImpl.fromJson(Map<String, dynamic> json) =>
       _$$PlantImplFromJson(json);
 
   @override
-  final int id;
-  @override
   final String name;
   @override
   final String description;
   @override
-  final String special_needs;
+  final int minTemperature;
   @override
-  final String required_temperature;
+  final int maxTemperature;
   @override
-  final String required_humidity;
+  final int minHumidity;
   @override
-  final String? image_url;
+  final int maxHumidity;
+  @override
+  final int minSoilHumidity;
+  @override
+  final int maxSoilHumidity;
+  @override
+  final String? imageData;
 
   @override
   String toString() {
-    return 'Plant(id: $id, name: $name, description: $description, special_needs: $special_needs, required_temperature: $required_temperature, required_humidity: $required_humidity, image_url: $image_url)';
+    return 'Plant(name: $name, description: $description, minTemperature: $minTemperature, maxTemperature: $maxTemperature, minHumidity: $minHumidity, maxHumidity: $maxHumidity, minSoilHumidity: $minSoilHumidity, maxSoilHumidity: $maxSoilHumidity, imageData: $imageData)';
   }
 
   @override
@@ -211,24 +243,38 @@ class _$PlantImpl implements _Plant {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$PlantImpl &&
-            (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.description, description) ||
                 other.description == description) &&
-            (identical(other.special_needs, special_needs) ||
-                other.special_needs == special_needs) &&
-            (identical(other.required_temperature, required_temperature) ||
-                other.required_temperature == required_temperature) &&
-            (identical(other.required_humidity, required_humidity) ||
-                other.required_humidity == required_humidity) &&
-            (identical(other.image_url, image_url) ||
-                other.image_url == image_url));
+            (identical(other.minTemperature, minTemperature) ||
+                other.minTemperature == minTemperature) &&
+            (identical(other.maxTemperature, maxTemperature) ||
+                other.maxTemperature == maxTemperature) &&
+            (identical(other.minHumidity, minHumidity) ||
+                other.minHumidity == minHumidity) &&
+            (identical(other.maxHumidity, maxHumidity) ||
+                other.maxHumidity == maxHumidity) &&
+            (identical(other.minSoilHumidity, minSoilHumidity) ||
+                other.minSoilHumidity == minSoilHumidity) &&
+            (identical(other.maxSoilHumidity, maxSoilHumidity) ||
+                other.maxSoilHumidity == maxSoilHumidity) &&
+            (identical(other.imageData, imageData) ||
+                other.imageData == imageData));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(runtimeType, id, name, description,
-      special_needs, required_temperature, required_humidity, image_url);
+  int get hashCode => Object.hash(
+      runtimeType,
+      name,
+      description,
+      minTemperature,
+      maxTemperature,
+      minHumidity,
+      maxHumidity,
+      minSoilHumidity,
+      maxSoilHumidity,
+      imageData);
 
   @JsonKey(ignore: true)
   @override
@@ -246,30 +292,36 @@ class _$PlantImpl implements _Plant {
 
 abstract class _Plant implements Plant {
   factory _Plant(
-      {required final int id,
-      required final String name,
+      {required final String name,
       required final String description,
-      required final String special_needs,
-      required final String required_temperature,
-      required final String required_humidity,
-      final String? image_url}) = _$PlantImpl;
+      required final int minTemperature,
+      required final int maxTemperature,
+      required final int minHumidity,
+      required final int maxHumidity,
+      required final int minSoilHumidity,
+      required final int maxSoilHumidity,
+      final String? imageData}) = _$PlantImpl;
 
   factory _Plant.fromJson(Map<String, dynamic> json) = _$PlantImpl.fromJson;
 
-  @override
-  int get id;
   @override
   String get name;
   @override
   String get description;
   @override
-  String get special_needs;
+  int get minTemperature;
   @override
-  String get required_temperature;
+  int get maxTemperature;
   @override
-  String get required_humidity;
+  int get minHumidity;
   @override
-  String? get image_url;
+  int get maxHumidity;
+  @override
+  int get minSoilHumidity;
+  @override
+  int get maxSoilHumidity;
+  @override
+  String? get imageData;
   @override
   @JsonKey(ignore: true)
   _$$PlantImplCopyWith<_$PlantImpl> get copyWith =>

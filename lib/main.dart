@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maker_greenhouse/providers/theme_notifier.dart';
+import 'package:maker_greenhouse/shared/ui_constants.dart';
 
 import 'providers/routes.dart';
 
@@ -13,14 +16,23 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer(builder: (context, ref, _) {
+      final themeMode = ref.watch(themeNotifierProvider);
       final router = ref.watch(goRouterProvider);
       return MaterialApp.router(
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('en'),
+          Locale('pl'),
+        ],
         routerConfig: router,
         title: 'Maker Greenhouse',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: themeMode.value,
       );
     });
   }

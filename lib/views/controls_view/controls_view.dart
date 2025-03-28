@@ -58,7 +58,7 @@ class ControlsView extends ConsumerWidget {
               margin: const EdgeInsets.symmetric(vertical: 10),
               height: 50,
               decoration: BoxDecoration(
-                color: Colors.grey,
+                color: Colors.white,
                 borderRadius: const BorderRadius.all(Radius.circular(10)),
                 boxShadow: [
                   BoxShadow(

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../models/greenhouse_model.dart';
 import '../../models/greenhouse_status_model.dart';
+import '../../models/plant_model.dart';
 
 class GreenhouseStatusIndicator extends StatelessWidget {
   const GreenhouseStatusIndicator({
-    Key? key,
+    super.key,
     required this.greenhouseStatus,
-  }) : super(key: key);
+  });
 
   final Status greenhouseStatus;
 
@@ -35,24 +36,83 @@ class GreenhouseStatusIndicator extends StatelessWidget {
 
 class GreenhouseTile extends StatelessWidget {
   const GreenhouseTile({Key? key, required this.greenhouse}) : super(key: key);
+
   final Greenhouse greenhouse;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      child: Column(
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      margin: const EdgeInsets.all(8.0),
+      child: ExpansionTile(
+        title: Text(
+          greenhouse.name,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text("Location: ${greenhouse.location}"),
         children: [
-          Text(greenhouse.name),
-          Text("Location: ${greenhouse.location}"),
           if (greenhouse.greenhouseStatus != null)
-            GreenhouseStatusIndicator(
-                greenhouseStatus: greenhouse.greenhouseStatus!.status),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: GreenhouseStatusPanel(
+                  greenhouseStatus: greenhouse.greenhouseStatus!),
+            ),
+          ...greenhouse.plants.map((plant) => PlantTile(
+                plant: plant,
+              )),
         ],
       ),
     );
   }
 }
 
+class PlantTile extends StatelessWidget {
+  const PlantTile({super.key, required this.plant});
+
+  final Plant plant;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.local_florist),
+      title: Text(plant.name),
+      subtitle: Text("description: ${plant.description}"),
+    );
+  }
+}
+
+class GreenhouseStatusPanel extends StatelessWidget {
+  const GreenhouseStatusPanel({
+    super.key,
+    required this.greenhouseStatus,
+  });
+
+  final GreenhouseStatus greenhouseStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        Text("status: "),
+        GreenhouseStatusIndicator(
+          greenhouseStatus: greenhouseStatus.status,
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("temperature: ${greenhouseStatus.temperature}"),
+            Text(
+              "soil humidity: ${greenhouseStatus.soilHumidity}%",
+            ),
+            Text("humidity: ${greenhouseStatus.humidity}%"),
+          ],
+        )
+      ],
+    );
+  }
+}
 // class PlantTile extends StatelessWidget {
 //   const PlantTile({
 //     Key? key,

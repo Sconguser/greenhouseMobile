@@ -11,13 +11,17 @@ class ThemeNotifier extends _$ThemeNotifier {
   @override
   Future<ThemeMode> build() async {
     _preferencesService = ref.read(preferencesServiceProvider);
+    return await _getThemeFromPreferences();
+  }
+
+  Future<ThemeMode> _getThemeFromPreferences() async {
     final isDarkMode = await _preferencesService.getThemeMode();
     return isDarkMode ? ThemeMode.dark : ThemeMode.light;
   }
 
   Future<void> toggleTheme() async {
-    state = AsyncValue.loading();
-    final currentTheme = await build();
+    state = const AsyncValue.loading();
+    ThemeMode currentTheme = await _getThemeFromPreferences();
     final isDarkMode = currentTheme == ThemeMode.dark;
     await _preferencesService.setThemeMode(!isDarkMode);
     state = AsyncValue.data(!isDarkMode ? ThemeMode.dark : ThemeMode.light);

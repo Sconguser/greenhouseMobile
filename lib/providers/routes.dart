@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:maker_greenhouse/views/auth/auth_view.dart';
 import 'package:maker_greenhouse/views/controls_view/controls_view.dart';
 import 'package:maker_greenhouse/views/scaffold_with_navigator/scaffold_with_navigator.dart';
+import 'package:maker_greenhouse/views/settings/settings_view.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../views/error/error_view.dart';
@@ -16,6 +17,7 @@ enum AppRoutes {
   login,
   home,
   splash,
+  settings,
 }
 
 extension AppRoutesExtension on AppRoutes {
@@ -60,6 +62,14 @@ GoRouter goRouter(GoRouterRef ref) {
               pageBuilder: (context, state) => MaterialPage(
                 key: state.pageKey,
                 child: const ControlsView(),
+              ),
+            ),
+            GoRoute(
+              path: AppRoutes.settings.path,
+              name: AppRoutes.settings.name,
+              pageBuilder: (context, state) => MaterialPage(
+                key: state.pageKey,
+                child: const SettingsView(),
               ),
             ),
           ])

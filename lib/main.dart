@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maker_greenhouse/providers/theme_notifier.dart';
 import 'package:maker_greenhouse/shared/ui_constants.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'providers/routes.dart';
 
@@ -20,6 +21,7 @@ class MyApp extends StatelessWidget {
       final router = ref.watch(goRouterProvider);
       return MaterialApp.router(
         localizationsDelegates: const [
+          AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,

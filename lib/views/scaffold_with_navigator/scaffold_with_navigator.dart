@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maker_greenhouse/providers/navigation_notifier.dart';
@@ -20,7 +21,7 @@ class _ScaffoldWithNavState extends ConsumerState<ScaffoldWithNav> {
     final router = ref.watch(goRouterProvider);
     final selectedIndex = ref.watch(navigationNotifierProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Greenhouse Control')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.hello)),
       drawer: _buildDrawer(ref),
       body: widget.child,
       bottomNavigationBar: _buildBottomNavBar(router, selectedIndex),

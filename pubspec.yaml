@@ -55,6 +55,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: any
+  language_picker: ^0.4.5
 
 dev_dependencies:
   flutter_test:

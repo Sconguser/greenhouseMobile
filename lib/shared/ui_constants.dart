@@ -7,6 +7,7 @@ final ThemeData lightTheme = ThemeData(
   textTheme: const TextTheme(
     bodyMedium: TextStyle(color: Colors.black),
   ),
+  dividerColor: Colors.transparent,
   // Define other properties as needed
 );
 
@@ -17,5 +18,6 @@ final ThemeData darkTheme = ThemeData(
   textTheme: const TextTheme(
     bodyMedium: TextStyle(color: Colors.white),
   ),
+  dividerColor: Colors.transparent,
   // Define other properties as needed
 );

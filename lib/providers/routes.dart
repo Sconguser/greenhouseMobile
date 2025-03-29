@@ -2,12 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maker_greenhouse/views/auth/auth_view.dart';
-import 'package:maker_greenhouse/views/controls_view/controls_view.dart';
 import 'package:maker_greenhouse/views/scaffold_with_navigator/scaffold_with_navigator.dart';
 import 'package:maker_greenhouse/views/settings/settings_view.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../views/error/error_view.dart';
+import '../views/greenhouses/controls_view.dart';
 import '../views/splash/splash_view.dart';
 import 'auth_notifier.dart';
 

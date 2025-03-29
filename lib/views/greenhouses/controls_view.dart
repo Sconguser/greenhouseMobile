@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maker_greenhouse/providers/greenhouse_notifier.dart';
 import 'package:maker_greenhouse/shared/loading_indicator.dart';
-import 'package:maker_greenhouse/views/controls_view/widgets.dart';
+import 'package:maker_greenhouse/views/greenhouses/widgets.dart';
 
 import '../../models/greenhouse_model.dart';
 import '../../generated/l10n.dart';
@@ -19,7 +19,7 @@ class ControlsView extends ConsumerWidget {
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints:
-              BoxConstraints(maxHeight: height * 0.9, maxWidth: width * 0.8),
+              BoxConstraints(maxHeight: height * 0.9, maxWidth: width * 0.95),
           child: greenhousesAsync.when(
               data: (List<Greenhouse> data) => _buildListView(data),
               error: (Object error, StackTrace stackTrace) =>
@@ -37,7 +37,7 @@ class ControlsView extends ConsumerWidget {
         ElevatedButton(
           onPressed: () =>
               ref.read(greenhouseNotifierProvider.notifier).refresh(),
-          child: const Text('Retry'),
+          child: Text(S.current.retry),
         ),
       ],
     );

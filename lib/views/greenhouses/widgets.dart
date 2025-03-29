@@ -1,9 +1,14 @@
+import 'package:another_xlider/another_xlider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../generated/l10n.dart';
 import '../../models/greenhouse_model.dart';
 import '../../models/greenhouse_status_model.dart';
 import '../../models/plant_model.dart';
+
+const String humidityUnit = "%";
+const String temperatureUnit = "℃";
 
 class GreenhouseStatusIndicator extends StatelessWidget {
   const GreenhouseStatusIndicator({
@@ -56,8 +61,14 @@ class GreenhouseTile extends StatelessWidget {
           if (greenhouse.greenhouseStatus != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: GreenhouseStatusPanel(
-                  greenhouseStatus: greenhouse.greenhouseStatus!),
+              child: Column(
+                children: [
+                  GreenhouseStatusPanel(
+                      greenhouseStatus: greenhouse.greenhouseStatus!),
+                  GreenhouseControlPanel(
+                      greenhouseStatus: greenhouse.greenhouseStatus!),
+                ],
+              ),
             ),
           ...greenhouse.plants.map((plant) => PlantTile(
                 plant: plant,
@@ -79,6 +90,182 @@ class PlantTile extends StatelessWidget {
       leading: const Icon(Icons.local_florist),
       title: Text(plant.name),
       subtitle: Text(S.of(context).controlsDescription(plant.description)),
+    );
+  }
+}
+
+class GreenhouseControlPanel extends ConsumerStatefulWidget {
+  const GreenhouseControlPanel({Key? key, required this.greenhouseStatus})
+      : super(key: key);
+  final GreenhouseStatus greenhouseStatus;
+
+  @override
+  ConsumerState<GreenhouseControlPanel> createState() =>
+      _GreenhouseControlPanelState();
+}
+
+class _GreenhouseControlPanelState
+    extends ConsumerState<GreenhouseControlPanel> {
+  double newTemperature = 0.0; // Store in state
+  double newHumidity = 0.0;
+  double newSoilHumidity = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    newTemperature = widget.greenhouseStatus.temperature;
+    newHumidity = widget.greenhouseStatus.humidity;
+    newSoilHumidity = widget.greenhouseStatus.soilHumidity;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    double currentTemperature = widget.greenhouseStatus.temperature;
+    double currentHumidity = widget.greenhouseStatus.humidity;
+    double currentSoilHumidity = widget.greenhouseStatus.soilHumidity;
+    double width = MediaQuery.of(context).size.width;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: ExpansionTile(
+          title: Text(
+            S.of(context).controlsControlPanel,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          children: [
+            Column(
+              children: [
+                _buildTemperatureColumn(),
+                _buildHumidityColumn(),
+                _buildSoilHumidityColumn(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    ElevatedButton(
+                      onPressed: (currentSoilHumidity != newSoilHumidity ||
+                              currentTemperature != newTemperature ||
+                              currentHumidity != newHumidity)
+                          ? () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title:
+                                      Text(S.of(context).controlsDialogTitle),
+                                  content:
+                                      Text(S.of(context).controlsDialogContent),
+                                  actions: [
+                                    TextButton(
+                                      child: Text(
+                                          S.of(context).controlsDialogReject),
+                                      onPressed: () {},
+                                    ),
+                                    TextButton(
+                                      child: Text(
+                                          S.of(context).controlsDialogAccept),
+                                      onPressed: () {},
+                                    ),
+                                  ],
+                                ),
+                                barrierDismissible: true,
+                              );
+                            }
+                          : null,
+                      child: Text(S.of(context).controlsConfirmChange),
+                    ),
+                    ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            newHumidity = currentHumidity;
+                            newTemperature = currentTemperature;
+                            newSoilHumidity = currentSoilHumidity;
+                          });
+                        },
+                        child: Text(S.of(context).controlsResetChange))
+                  ],
+                )
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Column _buildSoilHumidityColumn() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(S.current.soilHumidity),
+        Row(
+          children: [
+            Expanded(
+              child: FlutterSlider(
+                values: [newSoilHumidity],
+                max: 100,
+                min: 0,
+                onDragging: (handlerIndex, lowerValue, upperValue) {
+                  setState(() {
+                    newSoilHumidity = lowerValue;
+                  });
+                },
+              ),
+            ),
+            Text("$newSoilHumidity $humidityUnit"),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Column _buildHumidityColumn() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(S.current.humidity),
+        Row(
+          children: [
+            Expanded(
+              child: FlutterSlider(
+                values: [newHumidity],
+                max: 100,
+                min: 0,
+                onDragging: (handlerIndex, lowerValue, upperValue) {
+                  setState(() {
+                    newHumidity = lowerValue;
+                  });
+                },
+              ),
+            ),
+            Text("$newHumidity $humidityUnit"),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Column _buildTemperatureColumn() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(S.current.temperature),
+        Row(
+          children: [
+            Expanded(
+              child: FlutterSlider(
+                values: [newTemperature],
+                max: 100,
+                min: 0,
+                onDragging: (handlerIndex, lowerValue, upperValue) {
+                  setState(() {
+                    newTemperature = lowerValue;
+                  });
+                },
+              ),
+            ),
+            Text("$newTemperature $temperatureUnit"),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -107,9 +294,9 @@ class GreenhouseStatusPanel extends StatelessWidget {
                 .of(context)
                 .controlsTemperature(greenhouseStatus.temperature)),
             Text(
-                "${S.of(context).controlsHumidity(greenhouseStatus.humidity)}%"),
+                "${S.of(context).controlsHumidity(greenhouseStatus.humidity)} $humidityUnit"),
             Text(
-                "${S.of(context).controlsSoilHumidity(greenhouseStatus.soilHumidity)}%"),
+                "${S.of(context).controlsSoilHumidity(greenhouseStatus.soilHumidity)} $humidityUnit"),
           ],
         )
       ],

@@ -21,7 +21,7 @@ class _ScaffoldWithNavState extends ConsumerState<ScaffoldWithNav> {
     final router = ref.watch(goRouterProvider);
     final selectedIndex = ref.watch(navigationNotifierProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(S.of(context)!.hello)),
+      appBar: AppBar(title: Text(S.of(context).hello)),
       drawer: _buildDrawer(ref),
       body: widget.child,
       bottomNavigationBar: _buildBottomNavBar(router, selectedIndex),

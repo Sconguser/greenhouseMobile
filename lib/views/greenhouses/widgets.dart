@@ -1,6 +1,7 @@
 import 'package:another_xlider/another_xlider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 
 import '../../generated/l10n.dart';
 import '../../models/greenhouse_model.dart';
@@ -70,6 +71,18 @@ class GreenhouseTile extends StatelessWidget {
                 ],
               ),
             ),
+          ElevatedButton(
+            onPressed: () {
+              showMaterialModalBottomSheet(
+                  context: context,
+                  builder: (context) {
+                    return Container(
+                      child: Text("dupa"),
+                    );
+                  });
+            },
+            child: Text("Add new plant"),
+          ),
           ...greenhouse.plants.map((plant) => PlantTile(
                 plant: plant,
               )),
@@ -140,46 +153,10 @@ class _GreenhouseControlPanelState
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    ElevatedButton(
-                      onPressed: (currentSoilHumidity != newSoilHumidity ||
-                              currentTemperature != newTemperature ||
-                              currentHumidity != newHumidity)
-                          ? () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  title:
-                                      Text(S.of(context).controlsDialogTitle),
-                                  content:
-                                      Text(S.of(context).controlsDialogContent),
-                                  actions: [
-                                    TextButton(
-                                      child: Text(
-                                          S.of(context).controlsDialogReject),
-                                      onPressed: () {},
-                                    ),
-                                    TextButton(
-                                      child: Text(
-                                          S.of(context).controlsDialogAccept),
-                                      onPressed: () {},
-                                    ),
-                                  ],
-                                ),
-                                barrierDismissible: true,
-                              );
-                            }
-                          : null,
-                      child: Text(S.of(context).controlsConfirmChange),
-                    ),
-                    ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            newHumidity = currentHumidity;
-                            newTemperature = currentTemperature;
-                            newSoilHumidity = currentSoilHumidity;
-                          });
-                        },
-                        child: Text(S.of(context).controlsResetChange))
+                    _buildChangesConfirmationButton(currentSoilHumidity,
+                        currentTemperature, currentHumidity, context),
+                    _buildChangesResetButton(currentHumidity,
+                        currentTemperature, currentSoilHumidity, context)
                   ],
                 )
               ],
@@ -187,6 +164,53 @@ class _GreenhouseControlPanelState
           ],
         ),
       ),
+    );
+  }
+
+  ElevatedButton _buildChangesResetButton(
+      double currentHumidity,
+      double currentTemperature,
+      double currentSoilHumidity,
+      BuildContext context) {
+    return ElevatedButton(
+        onPressed: () {
+          setState(() {
+            newHumidity = currentHumidity;
+            newTemperature = currentTemperature;
+            newSoilHumidity = currentSoilHumidity;
+          });
+        },
+        child: Text(S.of(context).controlsResetChange));
+  }
+
+  ElevatedButton _buildChangesConfirmationButton(double currentSoilHumidity,
+      double currentTemperature, double currentHumidity, BuildContext context) {
+    return ElevatedButton(
+      onPressed: (currentSoilHumidity != newSoilHumidity ||
+              currentTemperature != newTemperature ||
+              currentHumidity != newHumidity)
+          ? () {
+              showDialog(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: Text(S.of(context).controlsDialogTitle),
+                  content: Text(S.of(context).controlsDialogContent),
+                  actions: [
+                    TextButton(
+                      child: Text(S.of(context).controlsDialogReject),
+                      onPressed: () {},
+                    ),
+                    TextButton(
+                      child: Text(S.of(context).controlsDialogAccept),
+                      onPressed: () {},
+                    ),
+                  ],
+                ),
+                barrierDismissible: true,
+              );
+            }
+          : null,
+      child: Text(S.of(context).controlsConfirmChange),
     );
   }
 
@@ -289,9 +313,8 @@ class GreenhouseStatusPanel extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(S
-                .of(context)
-                .controlsTemperature(greenhouseStatus.temperature)),
+            Text(
+                "${S.of(context).controlsTemperature(greenhouseStatus.temperature)} $temperatureUnit"),
             Text(
                 "${S.of(context).controlsHumidity(greenhouseStatus.humidity)} $humidityUnit"),
             Text(

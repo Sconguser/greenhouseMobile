@@ -170,16 +170,16 @@ class SignUpForm extends StatelessWidget {
   final Future<void> Function() onSignUp;
   final _formKey = GlobalKey<FormBuilderState>();
   final GlobalKey<FormBuilderFieldState> passwordFieldKey;
-  GlobalKey<FormBuilderFieldState> passwordConfirmationFieldKey;
-  GlobalKey<FormBuilderFieldState> usernameFieldKey;
+  final GlobalKey<FormBuilderFieldState> passwordConfirmationFieldKey;
+  final GlobalKey<FormBuilderFieldState> usernameFieldKey;
 
   SignUpForm({
-    Key? key,
+    super.key,
     required this.onSignUp,
     required this.passwordFieldKey,
     required this.passwordConfirmationFieldKey,
     required this.usernameFieldKey,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

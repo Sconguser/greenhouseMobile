@@ -1,24 +1,51 @@
+import 'dart:convert';
+
+import 'package:http/http.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/greenhouse_model.dart';
 import '../models/greenhouse_status_model.dart';
 import '../models/plant_model.dart';
+import 'http_conf.dart';
+import 'http_service.dart';
 
 part 'greenhouse_notifier.g.dart';
 
-///TODO: add api call
 @riverpod
 class GreenhouseNotifier extends _$GreenhouseNotifier {
   @override
   Future<List<Greenhouse>> build() async {
-    try {
-      // Replace with actual API call
-      await Future.delayed(
-          const Duration(seconds: 1)); // Simulate network delay
+    return _loadGreenhouses();
+  }
 
-      return _dummyData(); // Temporary until API implementation
-    } catch (e, st) {
-      throw AsyncError(e, st);
+  Future<List<Greenhouse>> _loadGreenhouses() async {
+    state = AsyncValue.loading();
+    try {
+      Response response = await ref
+          .read(httpServiceProvider)
+          .request(method: HttpMethod.get, endpoint: "/greenhouse/");
+      final utf8Body = utf8.decode(response.bodyBytes);
+      final List<dynamic> decoded = jsonDecode(utf8Body);
+      return decoded
+          .map((decodedGreenhouse) => Greenhouse.fromJson(decodedGreenhouse))
+          .toList();
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<Greenhouse> _fetchSingleGreenhouse(int id) async {
+    state = AsyncValue.loading();
+    try {
+      Response response = await ref
+          .read(httpServiceProvider)
+          .request(method: HttpMethod.get, endpoint: "/greenhouse/$id");
+      final utf8Body = utf8.decode(response.bodyBytes);
+      return Greenhouse.fromJson(jsonDecode(utf8Body));
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+      rethrow;
     }
   }
 
@@ -29,13 +56,43 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
     });
   }
 
+  Future<void> addNewPlantToGreenhouse(Plant plant, int id) async {
+    List<Greenhouse>? previousState;
+    if (state is AsyncData<List<Greenhouse>>) {
+      previousState = (state as AsyncData<List<Greenhouse>>).value;
+    }
+    state = AsyncValue.loading();
+    try {
+      Response response = await ref.read(httpServiceProvider).request(
+            method: HttpMethod.post,
+            endpoint: '/greenhouse/addPlant/$id',
+            body: plant.toJson(),
+          );
+      if (response.statusCode == 200) {
+        if (previousState != null) {
+          Greenhouse modifiedGreenhouse = await _fetchSingleGreenhouse(id);
+          previousState.removeWhere((greenhouse) => greenhouse.id == id);
+          state = AsyncValue.data([...previousState, modifiedGreenhouse]);
+        } else {
+          state = AsyncValue.data(await _loadGreenhouses());
+        }
+      } else {
+        throw Exception('Failed to add plant to greenhouse');
+      }
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+      rethrow;
+    }
+  }
+
   List<Greenhouse> _dummyData() {
     return [
       Greenhouse(
+        id: 1,
         name: "Greenhouse1",
         location: "horn",
         ipAddress: "1.1.1.1",
-        greenhouseStatus: GreenhouseStatus(
+        status: GreenhouseStatus(
             temperature: 50, humidity: 30, soilHumidity: 30, status: Status.ON),
         plants: [
           Plant(
@@ -71,10 +128,11 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
         ],
       ),
       Greenhouse(
+        id: 2,
         name: "Srenhouse1",
         location: "horn",
         ipAddress: "1.1.1.1",
-        greenhouseStatus: GreenhouseStatus(
+        status: GreenhouseStatus(
             temperature: 50, humidity: 30, soilHumidity: 30, status: Status.ON),
         plants: [
           Plant(
@@ -110,10 +168,11 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
         ],
       ),
       Greenhouse(
+        id: 3,
         name: "Srenhouse5",
         location: "horn",
         ipAddress: "1.1.1.1",
-        greenhouseStatus: GreenhouseStatus(
+        status: GreenhouseStatus(
             temperature: 50, humidity: 30, soilHumidity: 30, status: Status.ON),
         plants: [
           Plant(

@@ -1,5 +1,6 @@
 {
-    "hello": "Hello",
+    "hello": "Hello, {name}",
+    "stranger": "Stranger",
     "welcome": "Welcome to our application",
     "authSignIn":"Sign in",
     "authSignUp":"Sign up",
@@ -39,5 +40,18 @@
     "bottomNavBarSettings":"Settings",
     "drawerLogOut":"Log out",
     "settingsDarkTheme":"Dark theme",
+    "plantAddNewPlant":"Add new plant",
+    "addPlantToGreenhouseModalTitle":"Add to {greenhouseName}",
+    "addPlantToGreenhouseAppbarButton":"Plant not in list?",
+    "addNewPlantAppbarTitle":"Add new plant",
+    "addNewPlantAppbarButton":"Add",
+    "addNewPlantHelpTitle":"Adding new plant",
+    "addNewPlantHelpContent":"Please provide: name of the plant, description, i.e. special needs, minimal and maximal temperature, humidity and soil humidity, in which the plant may thrive. Optionally you can provide an image",
+    "addNewPlantHelpDismiss":"Okay",
+    "addNewPlantTextFieldPlantName":"Plant name",
+    "addNewPlantTextFieldDescription":"Description",
+    "addNewPlantTemperatureSlider":"Temperature range: from {lower} {unit} to {upper} {unit}",
+    "addNewPlantHumiditySlider":"Humidity range: from {lower} {unit} to {upper} {unit}",
+    "addNewPlantSoilHumiditySlider":"Soil humidity range: from {lower} {unit} to {upper} {unit}",
     "test":"test"
 }

@@ -8,12 +8,14 @@ part 'greenhouse_model.freezed.dart';
 part 'greenhouse_model.g.dart';
 
 @freezed
-class Greenhouse with _$Greenhouse {
+abstract class Greenhouse with _$Greenhouse {
+  const Greenhouse._();
   factory Greenhouse({
+    required int id,
     required String name,
     required String location,
     required String ipAddress,
-    GreenhouseStatus? greenhouseStatus,
+    GreenhouseStatus? status,
     @Default([]) List<Plant> plants,
   }) = _Greenhouse;
 

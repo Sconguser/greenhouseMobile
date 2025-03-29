@@ -1,12 +1,20 @@
 import 'package:another_xlider/another_xlider.dart';
+import 'package:another_xlider/models/tooltip/tooltip.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:maker_greenhouse/providers/greenhouse_notifier.dart';
+import 'package:maker_greenhouse/providers/plant_list_controller_provider.dart';
+import 'package:maker_greenhouse/shared/loading_indicator.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 
 import '../../generated/l10n.dart';
 import '../../models/greenhouse_model.dart';
 import '../../models/greenhouse_status_model.dart';
 import '../../models/plant_model.dart';
+import '../error/error_view.dart';
 
 const String humidityUnit = "%";
 const String temperatureUnit = "℃";
@@ -24,17 +32,17 @@ class GreenhouseStatusIndicator extends StatelessWidget {
     switch (greenhouseStatus) {
       case Status.ON:
         return Icon(
-          Icons.ac_unit,
+          Icons.signal_cellular_4_bar,
           color: Colors.green,
         );
       case Status.OFF:
         return Icon(
-          Icons.ac_unit,
+          Icons.signal_cellular_0_bar,
           color: Colors.red,
         );
       case Status.NOT_RESPONSIVE:
         return Icon(
-          Icons.ac_unit,
+          Icons.signal_cellular_connected_no_internet_0_bar,
           color: Colors.blue,
         );
     }
@@ -42,7 +50,7 @@ class GreenhouseStatusIndicator extends StatelessWidget {
 }
 
 class GreenhouseTile extends StatelessWidget {
-  const GreenhouseTile({Key? key, required this.greenhouse}) : super(key: key);
+  const GreenhouseTile({super.key, required this.greenhouse});
 
   final Greenhouse greenhouse;
 
@@ -59,35 +67,337 @@ class GreenhouseTile extends StatelessWidget {
         ),
         subtitle: Text(S.of(context).controlsLocation(greenhouse.location)),
         children: [
-          if (greenhouse.greenhouseStatus != null)
+          if (greenhouse.status != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
                 children: [
                   GreenhouseStatusPanel(
-                      greenhouseStatus: greenhouse.greenhouseStatus!),
+                      greenhouseStatus: greenhouse.status!),
                   GreenhouseControlPanel(
-                      greenhouseStatus: greenhouse.greenhouseStatus!),
+                      greenhouseStatus: greenhouse.status!),
                 ],
               ),
             ),
           ElevatedButton(
             onPressed: () {
-              showMaterialModalBottomSheet(
-                  context: context,
-                  builder: (context) {
-                    return Container(
-                      child: Text("dupa"),
-                    );
-                  });
+              buildPlantListBottomSheet(context, greenhouse);
             },
-            child: Text("Add new plant"),
+            child: Text(S.of(context).plantAddNewPlant),
           ),
           ...greenhouse.plants.map((plant) => PlantTile(
                 plant: plant,
               )),
         ],
       ),
+    );
+  }
+
+  Future<dynamic> buildPlantListBottomSheet(
+      BuildContext context, Greenhouse greenhouse) {
+    return showMaterialModalBottomSheet(
+        elevation: 5,
+        context: context,
+        builder: (context) {
+          return PlantModal(
+            greenhouse: greenhouse,
+          );
+        });
+  }
+}
+
+class PlantModal extends StatelessWidget {
+  const PlantModal({
+    super.key,
+    required this.greenhouse,
+  });
+
+  final Greenhouse greenhouse;
+
+  @override
+  Widget build(BuildContext mainContext) {
+    return Container(
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.of(mainContext).size.height * 0.4),
+      child: Material(
+        child: Navigator(
+            onGenerateRoute: (_) => MaterialPageRoute(
+                builder: (childContext) => Builder(builder: (childContext2) {
+                      return Scaffold(
+                        primary: false,
+                        appBar: AppBar(
+                          title: Text(
+                            S.of(mainContext).addPlantToGreenhouseModalTitle(
+                                greenhouse.name),
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(childContext2)
+                                    .push(MaterialPageRoute(builder: (context) {
+                                  return AddNewPlantForm();
+                                }));
+                              },
+                              child: Text(S
+                                  .of(mainContext)
+                                  .addPlantToGreenhouseAppbarButton),
+                            ),
+                          ],
+                        ),
+                        body: Consumer(
+                          builder: (BuildContext context, WidgetRef ref,
+                              Widget? child) {
+                            final plants = ref.watch(plantListNotifierProvider);
+                            return plants.when(
+                              data: (List<Plant> data) {
+                                return ListView.builder(
+                                  shrinkWrap: true,
+                                  // controller:
+                                  //     ModalScrollController.of(childContext2),
+                                  itemCount: data.length,
+                                  itemBuilder: (context, index) {
+                                    return Card(
+                                      child: ListTile(
+                                        title: Text(data[index].name),
+                                        subtitle: Text(data[index].description),
+                                        onTap: () {
+                                          ref
+                                              .read(greenhouseNotifierProvider
+                                                  .notifier)
+                                              .addNewPlantToGreenhouse(
+                                                  data[index], greenhouse.id);
+                                          Navigator.of(mainContext).pop();
+                                          ///todo: implement adding a new plant to a greenhouse
+                                        },
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                              error: (Object error, StackTrace stackTrace) {
+                                return ErrorScreen(
+                                  error: error,
+                                  onRetry: () {
+                                    ref.invalidate(plantListNotifierProvider);
+                                  },
+                                );
+                              },
+                              loading: () {
+                                return LoadingIndicatorWidget();
+                              },
+                            );
+                          },
+                        ),
+                      );
+                    }))),
+      ),
+    );
+  }
+}
+
+class AddNewPlantForm extends ConsumerStatefulWidget {
+  const AddNewPlantForm({
+    super.key,
+  });
+
+  @override
+  ConsumerState<AddNewPlantForm> createState() => _AddNewPlantFormState();
+}
+
+class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  final GlobalKey<FormBuilderFieldState> _nameFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+
+  final GlobalKey<FormBuilderFieldState> _descriptionFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+
+  double minTemperature = 10;
+  double maxTemperature = 40;
+  double minHumidity = 10;
+  double maxHumidity = 40;
+  double minSoilHumidity = 10;
+  double maxSoilHumidity = 40;
+
+  @override
+  Widget build(BuildContext context) {
+    double width = MediaQuery.of(context).size.width;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(S.of(context).addNewPlantAppbarTitle),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              _formKey.currentState?.validate();
+              if (_formKey.currentState != null &&
+                  _formKey.currentState!.isValid) {
+                ref.read(plantListNotifierProvider.notifier).addPlant(Plant(
+                      name: _nameFieldKey.currentState!.value,
+                      description: _descriptionFieldKey.currentState!.value,
+                      minTemperature: minTemperature.floor(),
+                      maxTemperature: maxTemperature.floor(),
+                      minHumidity: minHumidity.floor(),
+                      maxHumidity: maxHumidity.floor(),
+                      minSoilHumidity: minSoilHumidity.floor(),
+                      maxSoilHumidity: maxSoilHumidity.floor(),
+                    ));
+                Navigator.of(context).pop();
+              }
+            },
+            child: Text(S.of(context).addNewPlantAppbarButton),
+          ),
+          IconButton(
+            icon: Icon(Icons.help),
+            onPressed: () {
+              showDialog(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                        title: Text(S.of(context).addNewPlantHelpTitle),
+                        content: Text(S.of(context).addNewPlantHelpContent),
+                        actions: [
+                          TextButton(
+                            child: Text(S.of(context).addNewPlantHelpDismiss),
+                            onPressed: () {
+                              Navigator.pop(dialogContext);
+                            },
+                          ),
+                        ],
+                      ),
+                  barrierDismissible: true);
+            },
+          )
+        ],
+      ),
+      primary: false,
+      body: Align(
+        alignment: Alignment.center,
+        child: Container(
+          constraints: BoxConstraints(maxWidth: width * 0.9),
+          padding: EdgeInsets.only(top: 5),
+          child: FormBuilder(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  FormBuilderTextField(
+                    key: _nameFieldKey,
+                    name: 'name',
+                    decoration: InputDecoration(
+                      labelText: S.of(context).addNewPlantTextFieldPlantName,
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: FormBuilderValidators.compose([
+                      FormBuilderValidators.required(
+                          errorText: S.of(context).authThisFieldCannotBeEmpty),
+                    ]),
+                  ),
+                  buildSizedBoxBetweenInputs(),
+                  FormBuilderTextField(
+                    key: _descriptionFieldKey,
+                    name: 'description',
+                    maxLines: 5,
+                    decoration: InputDecoration(
+                      labelText: S.of(context).addNewPlantTextFieldDescription,
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: FormBuilderValidators.compose([
+                      FormBuilderValidators.required(
+                          errorText: S.of(context).authThisFieldCannotBeEmpty),
+                    ]),
+                  ),
+                  buildSizedBoxBetweenInputs(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(S.of(context).addNewPlantTemperatureSlider(
+                          minTemperature, temperatureUnit, maxTemperature)),
+                      FlutterSlider(
+                        selectByTap: false,
+                        tooltip: FlutterSliderTooltip(
+                          leftPrefix: Text("Min:"),
+                          leftSuffix: Text(temperatureUnit),
+                          rightPrefix: Text("Max"),
+                          rightSuffix: Text(temperatureUnit),
+                        ),
+                        values: [minTemperature, maxTemperature],
+                        max: 100,
+                        min: 0,
+                        rangeSlider: true,
+                        onDragging: (handlerIndex, lowerValue, upperValue) {
+                          setState(() {
+                            minTemperature = lowerValue;
+                            maxTemperature = upperValue;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(S.of(context).addNewPlantHumiditySlider(
+                          minHumidity, humidityUnit, maxHumidity)),
+                      FlutterSlider(
+                        selectByTap: false,
+                        tooltip: FlutterSliderTooltip(
+                          leftPrefix: Text("Min:"),
+                          leftSuffix: Text(humidityUnit),
+                          rightPrefix: Text("Max"),
+                          rightSuffix: Text(humidityUnit),
+                        ),
+                        values: [minHumidity, maxHumidity],
+                        max: 100,
+                        min: 0,
+                        rangeSlider: true,
+                        onDragging: (handlerIndex, lowerValue, upperValue) {
+                          setState(() {
+                            minHumidity = lowerValue;
+                            maxHumidity = upperValue;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(S.of(context).addNewPlantSoilHumiditySlider(
+                          minSoilHumidity, humidityUnit, maxSoilHumidity)),
+                      FlutterSlider(
+                        selectByTap: false,
+                        tooltip: FlutterSliderTooltip(
+                          leftPrefix: Text("Min:"),
+                          leftSuffix: Text(humidityUnit),
+                          rightPrefix: Text("Max"),
+                          rightSuffix: Text(humidityUnit),
+                        ),
+                        values: [minSoilHumidity, maxSoilHumidity],
+                        max: 100,
+                        min: 0,
+                        rangeSlider: true,
+                        onDragging: (handlerIndex, lowerValue, upperValue) {
+                          setState(() {
+                            minSoilHumidity = lowerValue;
+                            maxSoilHumidity = upperValue;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  SizedBox buildSizedBoxBetweenInputs() {
+    return SizedBox(
+      height: 5,
     );
   }
 }
@@ -223,6 +533,7 @@ class _GreenhouseControlPanelState
           children: [
             Expanded(
               child: FlutterSlider(
+                tooltip: FlutterSliderTooltip(rightSuffix: Text(humidityUnit)),
                 values: [newSoilHumidity],
                 max: 100,
                 min: 0,
@@ -249,6 +560,7 @@ class _GreenhouseControlPanelState
           children: [
             Expanded(
               child: FlutterSlider(
+                tooltip: FlutterSliderTooltip(rightSuffix: Text(humidityUnit)),
                 values: [newHumidity],
                 max: 100,
                 min: 0,
@@ -275,6 +587,8 @@ class _GreenhouseControlPanelState
           children: [
             Expanded(
               child: FlutterSlider(
+                tooltip:
+                    FlutterSliderTooltip(rightSuffix: Text(temperatureUnit)),
                 values: [newTemperature],
                 max: 100,
                 min: 0,

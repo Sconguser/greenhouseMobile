@@ -7,7 +7,8 @@ part 'greenhouse_status_model.g.dart';
 enum Status { ON, OFF, NOT_RESPONSIVE }
 
 @freezed
-class GreenhouseStatus with _$GreenhouseStatus {
+abstract class GreenhouseStatus with _$GreenhouseStatus {
+  const GreenhouseStatus._();
   factory GreenhouseStatus({
     required double temperature,
     required double humidity,

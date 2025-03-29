@@ -8,7 +8,7 @@ import '../../models/greenhouse_model.dart';
 import '../../generated/l10n.dart';
 
 class ControlsView extends ConsumerWidget {
-  const ControlsView({Key? key}) : super(key: key);
+  const ControlsView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,17 +44,14 @@ class ControlsView extends ConsumerWidget {
   }
 
   ListView _buildListView(List<Greenhouse> greenhouses) {
+    greenhouses.sort((g1, g2) => g1.id.compareTo(g2.id));
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
       itemCount: greenhouses.length + 1, // Add 1 for the button
       itemBuilder: (context, index) {
-        // If the index is the last one, return the button
         if (index == greenhouses.length) {
           return GestureDetector(
-            onTap: () {
-              // Navigator.pushNamed(
-              //     context, '/add'); // Redirect to Add Plant View
-            },
+            onTap: () {},
             child: Container(
               margin: const EdgeInsets.symmetric(vertical: 10),
               height: 50,

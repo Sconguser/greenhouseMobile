@@ -9,7 +9,8 @@ part 'plant_model.freezed.dart';
 part 'plant_model.g.dart';
 
 @freezed
-class Plant with _$Plant {
+abstract class Plant with _$Plant {
+  const Plant._();
   factory Plant({
     required String name,
     required String description,

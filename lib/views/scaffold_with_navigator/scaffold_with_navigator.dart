@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maker_greenhouse/providers/auth_notifier.dart';
 import 'package:maker_greenhouse/providers/navigation_notifier.dart';
 
 import '../../generated/l10n.dart';
@@ -20,8 +21,10 @@ class _ScaffoldWithNavState extends ConsumerState<ScaffoldWithNav> {
   Widget build(BuildContext context) {
     final router = ref.watch(goRouterProvider);
     final selectedIndex = ref.watch(navigationNotifierProvider);
+    String? username = ref.read(authNotifierProvider).value?.username;
     return Scaffold(
-      appBar: AppBar(title: Text(S.of(context).hello)),
+      appBar: AppBar(
+          title: Text(S.of(context).hello(username ?? S.of(context).stranger))),
       drawer: _buildDrawer(ref),
       body: widget.child,
       bottomNavigationBar: _buildBottomNavBar(router, selectedIndex),

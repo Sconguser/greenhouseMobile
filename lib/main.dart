@@ -3,8 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maker_greenhouse/providers/theme_notifier.dart';
 import 'package:maker_greenhouse/shared/ui_constants.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-
+import 'generated/l10n.dart';
 import 'providers/routes.dart';
 
 void main() {
@@ -21,36 +20,18 @@ class MyApp extends StatelessWidget {
       final router = ref.watch(goRouterProvider);
       return MaterialApp.router(
         localizationsDelegates: const [
-          AppLocalizations.delegate,
+          S.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: const [
-          Locale('en'),
-          Locale('pl'),
-        ],
+        supportedLocales: S.delegate.supportedLocales,
         routerConfig: router,
-        title: 'Maker Greenhouse',
+        title: 'Greenhouse@Makerspace',
         theme: lightTheme,
         darkTheme: darkTheme,
         themeMode: themeMode.value,
       );
     });
-  }
-}
-
-class MainScaffold extends StatelessWidget {
-  final Widget body;
-
-  const MainScaffold({Key? key, required this.body}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        body: body,
-      ),
-    );
   }
 }

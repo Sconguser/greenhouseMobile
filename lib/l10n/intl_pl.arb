@@ -1,0 +1,33 @@
+{
+    "hello": "Hej",
+    "welcome": "Witaj w naszej aplikacji",
+    "authSignIn":"Logowanie",
+    "authSignUp":"Rejestracja",
+    "authUsername":"Nazwa użytkownika",
+    "authPassword":"Hasło",
+    "authPasswordConfirmation":"Powtórz hasło",
+    "authThisFieldCannotBeEmpty":"To pole nie może być pust",
+    "authPasswordTooLong":"Hasło może mieć do {val} znaków",
+    "authPasswordTooShort":"Hasło musi mieć przynajmniej {val} znaków",
+    "authPasswordsDoNotMatch":"Hasła muszą się zgadzać // this does not work correctly",
+    "retry":"Powtórz",
+
+    "error":"Błąd: {value}",
+    "@error":{
+        "placeholders":{
+            "value":{}
+        }
+    },
+    "controlsLocation":"Miejsce:{value}",
+    "controlsDescription":"Opis:{value}",
+    "controlsStatus":"Status",
+    "controlsTemperature":"Temperatura:{value}",
+    "controlsHumidity":"Wilgotność:{value}",
+    "controlsSoilHumidity":"Wilgotność gleby:{value}",
+    "bottomNavBarControls":"Sterowanie",
+    "bottomNavBarAnalytics":"Statystyki",
+    "bottomNavBarSettings":"Ustawienia",
+    "drawerLogOut":"Wyloguj się",
+    "settingsDarkTheme":"Ciemny motyw",
+    "test":"sprawdzam"
+}

@@ -5,6 +5,7 @@ import 'package:maker_greenhouse/shared/loading_indicator.dart';
 import 'package:maker_greenhouse/views/controls_view/widgets.dart';
 
 import '../../models/greenhouse_model.dart';
+import '../../generated/l10n.dart';
 
 class ControlsView extends ConsumerWidget {
   const ControlsView({Key? key}) : super(key: key);
@@ -31,7 +32,7 @@ class ControlsView extends ConsumerWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text('Error: ${error.toString()}'),
+        Text(S.current.error(error.toString())),
         const SizedBox(height: 16),
         ElevatedButton(
           onPressed: () =>

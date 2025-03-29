@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../../generated/l10n.dart';
 
 class ErrorScreen extends StatelessWidget {
   const ErrorScreen({super.key, required this.error, required this.onRetry});
@@ -37,7 +38,7 @@ class ErrorScreen extends StatelessWidget {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: onRetry,
-              child: const Text('Retry'),
+              child: Text(S.of(context).retry),
             ),
           ],
         ),

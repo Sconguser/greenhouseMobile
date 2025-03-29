@@ -1,0 +1,33 @@
+{
+    "hello": "Hello",
+    "welcome": "Welcome to our application",
+    "authSignIn":"Sign in",
+    "authSignUp":"Sign up",
+    "authUsername":"Username",
+    "authPassword":"Password",
+    "authPasswordConfirmation":"Password confirmation",
+    "authThisFieldCannotBeEmpty":"This field cannot be empty",
+    "authPasswordTooLong":"Password can have up to {val} characters",
+    "authPasswordTooShort":"Password needs to be at least {val} characters long",
+    "authPasswordsDoNotMatch":"Passwords must match // this does not work correctly",
+    "retry":"Retry",
+
+    "error":"Error: {value}",
+    "@error":{
+        "placeholders":{
+            "value":{}
+        }
+    },
+    "controlsLocation":"Location:{value}",
+    "controlsDescription":"Description:{value}",
+    "controlsStatus":"Status",
+    "controlsTemperature":"Temperature:{value}",
+    "controlsHumidity":"Humidity:{value}",
+    "controlsSoilHumidity":"Soil humidity:{value}",
+    "bottomNavBarControls":"Controls",
+    "bottomNavBarAnalytics":"Analytics",
+    "bottomNavBarSettings":"Settings",
+    "drawerLogOut":"Log out",
+    "settingsDarkTheme":"Dark theme",
+    "test":"test"
+}

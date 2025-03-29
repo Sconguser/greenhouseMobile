@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maker_greenhouse/providers/navigation_notifier.dart';
 
+import '../../generated/l10n.dart';
 import '../../providers/routes.dart';
 
 class ScaffoldWithNav extends ConsumerStatefulWidget {
@@ -21,7 +21,7 @@ class _ScaffoldWithNavState extends ConsumerState<ScaffoldWithNav> {
     final router = ref.watch(goRouterProvider);
     final selectedIndex = ref.watch(navigationNotifierProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.hello)),
+      appBar: AppBar(title: Text(S.of(context)!.hello)),
       drawer: _buildDrawer(ref),
       body: widget.child,
       bottomNavigationBar: _buildBottomNavBar(router, selectedIndex),
@@ -33,18 +33,18 @@ class _ScaffoldWithNavState extends ConsumerState<ScaffoldWithNav> {
       currentIndex: selectedIndex,
       onTap: (index) =>
           ref.read(navigationNotifierProvider.notifier).navigate(index),
-      items: const [
+      items: [
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
-          label: 'Controls',
+          label: S.current.bottomNavBarControls,
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.analytics),
-          label: 'Analytics',
+          label: S.current.bottomNavBarAnalytics,
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.settings),
-          label: 'Settings',
+          label: S.current.bottomNavBarSettings,
         ),
       ],
     );
@@ -54,9 +54,11 @@ class _ScaffoldWithNavState extends ConsumerState<ScaffoldWithNav> {
     return Drawer(
       child: ListView(
         children: [
-          _buildDrawerItem(0, Icons.home, 'Controls', ref),
-          _buildDrawerItem(1, Icons.analytics, 'Analytics', ref),
-          _buildDrawerItem(2, Icons.settings, 'Settings', ref),
+          _buildDrawerItem(0, Icons.home, S.current.bottomNavBarControls, ref),
+          _buildDrawerItem(
+              1, Icons.analytics, S.current.bottomNavBarAnalytics, ref),
+          _buildDrawerItem(
+              2, Icons.settings, S.current.bottomNavBarSettings, ref),
         ],
       ),
     );

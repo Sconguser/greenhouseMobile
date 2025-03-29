@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../generated/l10n.dart';
 import '../../models/greenhouse_model.dart';
 import '../../models/greenhouse_status_model.dart';
 import '../../models/plant_model.dart';
@@ -50,7 +51,7 @@ class GreenhouseTile extends StatelessWidget {
           greenhouse.name,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        subtitle: Text("Location: ${greenhouse.location}"),
+        subtitle: Text(S.of(context).controlsLocation(greenhouse.location)),
         children: [
           if (greenhouse.greenhouseStatus != null)
             Padding(
@@ -77,7 +78,7 @@ class PlantTile extends StatelessWidget {
     return ListTile(
       leading: const Icon(Icons.local_florist),
       title: Text(plant.name),
-      subtitle: Text("description: ${plant.description}"),
+      subtitle: Text(S.of(context).controlsDescription(plant.description)),
     );
   }
 }
@@ -95,18 +96,20 @@ class GreenhouseStatusPanel extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        Text("status: "),
+        Text(S.of(context).controlsStatus),
         GreenhouseStatusIndicator(
           greenhouseStatus: greenhouseStatus.status,
         ),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("temperature: ${greenhouseStatus.temperature}"),
+            Text(S
+                .of(context)
+                .controlsTemperature(greenhouseStatus.temperature)),
             Text(
-              "soil humidity: ${greenhouseStatus.soilHumidity}%",
-            ),
-            Text("humidity: ${greenhouseStatus.humidity}%"),
+                "${S.of(context).controlsHumidity(greenhouseStatus.humidity)}%"),
+            Text(
+                "${S.of(context).controlsSoilHumidity(greenhouseStatus.soilHumidity)}%"),
           ],
         )
       ],

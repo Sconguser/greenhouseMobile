@@ -3,8 +3,10 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:maker_greenhouse/providers/auth_notifier.dart';
+import 'package:maker_greenhouse/providers/language_notifier.dart';
 import 'package:maker_greenhouse/shared/loading_indicator.dart';
 import 'package:maker_greenhouse/views/error/error_view.dart';
+import '../../generated/l10n.dart';
 
 enum AuthMode { signIn, signUp }
 
@@ -30,7 +32,7 @@ class AuthModeChooser extends StatelessWidget {
         TextButton(
           onPressed: () => onModeChanged(AuthMode.signIn),
           child: Text(
-            "Sign In",
+            S.of(context).authSignIn,
             style: TextStyle(
               fontWeight: authMode == AuthMode.signIn
                   ? FontWeight.bold
@@ -43,7 +45,7 @@ class AuthModeChooser extends StatelessWidget {
         TextButton(
           onPressed: () => onModeChanged(AuthMode.signUp),
           child: Text(
-            "Sign Up",
+            S.of(context).authSignUp,
             style: TextStyle(
               fontWeight: authMode == AuthMode.signUp
                   ? FontWeight.bold
@@ -83,30 +85,33 @@ class SignInForm extends ConsumerWidget {
           FormBuilderTextField(
             key: usernameFieldKey,
             name: 'signInUsername',
-            decoration: const InputDecoration(
-              hintText: 'Username',
+            decoration: InputDecoration(
+              hintText: S.of(context).authUsername,
             ),
             validator: FormBuilderValidators.compose(
               [
                 FormBuilderValidators.required(
-                    errorText: "This field cannot be empty"),
+                    errorText: S.of(context).authThisFieldCannotBeEmpty),
               ],
             ),
           ),
           FormBuilderTextField(
             key: passwordFieldKey,
             name: "signInPassword",
-            decoration: const InputDecoration(
-              hintText: 'Password',
+            decoration: InputDecoration(
+              hintText: S.of(context).authPassword,
             ),
             validator: FormBuilderValidators.required(
-                errorText: "This field cannot be empty"),
+                errorText: S.of(context).authThisFieldCannotBeEmpty),
             obscureText: true,
           ),
           const SizedBox(
             height: 10,
           ),
-          AuthButton(formKey: _formKey, onPressed: onSignIn, text: "sign in"),
+          AuthButton(
+              formKey: _formKey,
+              onPressed: onSignIn,
+              text: S.of(context).authSignIn),
         ],
       ),
     );
@@ -176,6 +181,8 @@ class SignUpForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    int maxPasswordsLength = 20;
+    int minPasswordLength = 6;
     return FormBuilder(
       key: _formKey,
       child: Column(
@@ -183,13 +190,13 @@ class SignUpForm extends StatelessWidget {
           FormBuilderTextField(
             key: usernameFieldKey,
             name: 'signUpUsername',
-            decoration: const InputDecoration(
-              hintText: 'Username',
+            decoration: InputDecoration(
+              hintText: S.of(context).authUsername,
             ),
             validator: FormBuilderValidators.compose(
               [
                 FormBuilderValidators.required(
-                    errorText: "This field cannot be empty"),
+                    errorText: S.of(context).authThisFieldCannotBeEmpty),
               ],
             ),
           ),
@@ -197,20 +204,22 @@ class SignUpForm extends StatelessWidget {
             key: passwordFieldKey,
             name: "signUpPassword",
             initialValue: "",
-            decoration: const InputDecoration(
-              hintText: 'Password',
+            decoration: InputDecoration(
+              hintText: S.of(context).authPassword,
             ),
             validator: FormBuilderValidators.compose(
               [
                 FormBuilderValidators.required(
-                    errorText: "This field cannot be empty"),
+                    errorText: S.of(context).authThisFieldCannotBeEmpty),
                 FormBuilderValidators.max(
-                  20,
-                  errorText: "Password can have up to 20 characters",
+                  maxPasswordsLength,
+                  errorText:
+                      S.of(context).authPasswordTooLong(maxPasswordsLength),
                 ),
                 FormBuilderValidators.min(
-                  6,
-                  errorText: "Password needs to be at least 6 characters long",
+                  minPasswordLength,
+                  errorText:
+                      S.of(context).authPasswordTooShort(minPasswordLength),
                 ),
               ],
             ),
@@ -220,21 +229,23 @@ class SignUpForm extends StatelessWidget {
             key: passwordConfirmationFieldKey,
             name: "signUpPasswordConfirmation",
             initialValue: "",
-            decoration: const InputDecoration(
-              hintText: 'Confirm password',
+            decoration: InputDecoration(
+              hintText: S.of(context).authPasswordConfirmation,
             ),
 
             //TODO: to nie dziala, do poprawy
             validator: FormBuilderValidators.required(
-                errorText:
-                    "Passwords must match // this does not work correctly"),
+                errorText: S.of(context).authPasswordsDoNotMatch),
             obscureText: true,
             autovalidateMode: AutovalidateMode.onUserInteraction,
           ),
           const SizedBox(
             height: 10,
           ),
-          AuthButton(formKey: _formKey, onPressed: onSignUp, text: "sign up"),
+          AuthButton(
+              formKey: _formKey,
+              onPressed: onSignUp,
+              text: S.of(context).authSignUp),
         ],
       ),
     );
@@ -267,6 +278,7 @@ class _AuthViewState extends ConsumerState<AuthView> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(languageNotifierProvider);
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
     return Scaffold(

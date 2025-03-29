@@ -18,6 +18,7 @@ enum AppRoutes {
   home,
   splash,
   settings,
+  settingsUnauthorized,
 }
 
 extension AppRoutesExtension on AppRoutes {
@@ -51,6 +52,20 @@ GoRouter goRouter(GoRouterRef ref) {
           child: const AuthView(),
         ),
       ),
+      ShellRoute(
+          builder: (context, state, child) {
+            return Scaffold(body: child);
+          },
+          routes: [
+            GoRoute(
+              path: AppRoutes.settingsUnauthorized.path,
+              name: AppRoutes.settingsUnauthorized.name,
+              pageBuilder: (context, state) => MaterialPage(
+                key: state.pageKey,
+                child: const SettingsView(),
+              ),
+            ),
+          ]),
       ShellRoute(
           builder: (context, state, child) {
             return ScaffoldWithNav(child: child);
@@ -94,7 +109,7 @@ GoRouter goRouter(GoRouterRef ref) {
       }
 
       // Unauthenticated user
-      if (!isAuthenticated) {
+      if (!isAuthenticated && !_isPublicRoute(currentLocation)) {
         return currentLocation == AppRoutes.login.path
             ? null
             : AppRoutes.login.path;
@@ -117,5 +132,8 @@ GoRouter goRouter(GoRouterRef ref) {
   );
 }
 
-bool _isPublicRoute(String path) =>
-    [AppRoutes.login.path, '/splash', '/unauthorized'].contains(path);
+bool _isPublicRoute(String path) => [
+      AppRoutes.login.path,
+      AppRoutes.settingsUnauthorized.path,
+      '/unauthorized'
+    ].contains(path);

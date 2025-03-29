@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:maker_greenhouse/providers/auth_notifier.dart';
 import 'package:maker_greenhouse/providers/language_notifier.dart';
+import 'package:maker_greenhouse/providers/routes.dart';
 import 'package:maker_greenhouse/shared/loading_indicator.dart';
 import 'package:maker_greenhouse/views/error/error_view.dart';
+
 import '../../generated/l10n.dart';
 
 enum AuthMode { signIn, signUp }
@@ -282,6 +284,13 @@ class _AuthViewState extends ConsumerState<AuthView> {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
     return Scaffold(
+      ///TODO: to be used in the future
+      // floatingActionButton: TextButton(
+      //   child: Text(S.of(context).bottomNavBarSettings),
+      //   onPressed: () {
+      //     ref.read(goRouterProvider).go(AppRoutes.settingsUnauthorized.path);
+      //   },
+      // ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

@@ -123,7 +123,6 @@ class _GreenhouseControlPanelState
     double currentTemperature = widget.greenhouseStatus.temperature;
     double currentHumidity = widget.greenhouseStatus.humidity;
     double currentSoilHumidity = widget.greenhouseStatus.soilHumidity;
-    double width = MediaQuery.of(context).size.width;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(8.0),

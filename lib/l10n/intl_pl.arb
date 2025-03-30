@@ -19,12 +19,12 @@
             "value":{}
         }
     },
-    "controlsLocation":"Miejsce:{value}",
-    "controlsDescription":"Opis:{value}",
+    "controlsLocation":"Miejsce: {value}",
+    "controlsDescription":"Opis: {value}",
     "controlsStatus":"Status",
-    "controlsTemperature":"Temperatura:{value}",
-    "controlsHumidity":"Wilgotność:{value}",
-    "controlsSoilHumidity":"Wilgotność gleby:{value}",
+    "controlsTemperature":"Temperatura: {value}",
+    "controlsHumidity":"Wilgotność: {value}",
+    "controlsSoilHumidity":"Wilgotność gleby: {value}",
     "temperature":"Temperatura",
     "humidity":"Wilgotność",
     "soilHumidity":"Wilgotność gleby",

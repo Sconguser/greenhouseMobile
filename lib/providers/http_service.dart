@@ -13,7 +13,7 @@ part 'http_service.g.dart';
 
 ///TODO: refactor
 @riverpod
-HttpService httpService(HttpServiceRef ref) => HttpService(ref);
+HttpService httpService(Ref ref) => HttpService(ref);
 
 class HttpService {
   final Ref _ref;

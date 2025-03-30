@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
 import 'package:maker_greenhouse/providers/http_service.dart';
+import 'package:maker_greenhouse/providers/notification_service.dart';
 import 'package:maker_greenhouse/providers/routes.dart';
 import 'package:maker_greenhouse/providers/secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -46,7 +47,7 @@ class AuthNotifier extends _$AuthNotifier {
           .read(secureStorageProvider)
           .write(key: KEYS.jwtToken.name, value: token);
       state = AsyncValue.data(User.fromJson(jsonDecode(response.body)));
-      // ref.read(goRouterProvider).goNamed(AppRoutes.home.path);
+      await _initializeFCM();
     } catch (e) {
       ///TODO: exception handling
       debugPrint("Error with signin");
@@ -76,7 +77,16 @@ class AuthNotifier extends _$AuthNotifier {
     try {
       Response response = await ref.read(httpServiceProvider).request(
           method: HttpMethod.get, endpoint: 'auth/verify', requireAuth: true);
-      return User.fromJson(jsonDecode(response.body));
+
+      final user = User.fromJson(jsonDecode(response.body));
+
+      // ✅ Ensure we update state before initializing FCM
+      state = AsyncValue.data(user);
+
+      // ✅ Initialize FCM if user is valid
+      await _initializeFCM();
+
+      return user;
     } catch (e) {
       ref.read(secureStorageProvider).delete(key: KEYS.jwtToken.name);
       state = AsyncValue.error(e, StackTrace.current);
@@ -85,8 +95,17 @@ class AuthNotifier extends _$AuthNotifier {
   }
 
   Future<void> logout() async {
+    await _clearFCM();
     await ref.read(secureStorageProvider.notifier).delete(KEYS.jwtToken.name);
     ref.invalidateSelf();
     ref.read(goRouterProvider).goNamed(AppRoutes.login.path);
+  }
+
+  Future<void> _initializeFCM() async {
+    ref.read(notificationServiceProvider).initialize();
+  }
+
+  Future<void> _clearFCM() async {
+    ref.read(notificationServiceProvider).clearToken();
   }
 }

@@ -10,6 +10,7 @@ enum Role { USER, ADMIN }
 abstract class User with _$User {
   const User._();
   factory User({
+    required int id,
     required String username,
     required Role role,
   }) = _User;

@@ -46,7 +46,7 @@
     "addNewPlantAppbarTitle":"Add new plant",
     "addNewPlantAppbarButton":"Add",
     "addNewPlantHelpTitle":"Adding new plant",
-    "addNewPlantHelpContent":"Please provide: name of the plant, description, i.e. special needs, minimal and maximal temperature, humidity and soil humidity, in which the plant may thrive. Optionally you can provide an image. You cannot add the same plant (name) multiple times",
+    "addNewPlantHelpContent":"Please provide: name of the plant, description, i.e. special needs, minimal and maximal temperature and humidity of air and soil, in which the plant may thrive. Optionally you can provide an image. You cannot add the same plant (name) multiple times",
     "addNewPlantHelpDismiss":"Okay",
     "addNewPlantTextFieldPlantName":"Plant name",
     "addNewPlantTextFieldDescription":"Description",

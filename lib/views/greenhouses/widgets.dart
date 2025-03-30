@@ -116,7 +116,7 @@ class PlantModal extends StatelessWidget {
   Widget build(BuildContext mainContext) {
     return Container(
       constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(mainContext).size.height * 0.4),
+          maxHeight: MediaQuery.of(mainContext).size.height * 0.6),
       child: Material(
         child: Navigator(
             onGenerateRoute: (_) => MaterialPageRoute(
@@ -399,9 +399,9 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
     double width = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
-        title: Text(S.of(context).addNewPlantAppbarTitle),
+        title: Text(S.of(context).addNewPlantAppbarTitle, style:TextStyle(fontSize: 17),),
         actions: [
-          TextButton(
+          ElevatedButton.icon(
             onPressed: () async {
               _formKey.currentState?.validate();
               if (_formKey.currentState != null &&
@@ -419,7 +419,11 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
                 Navigator.of(context).pop();
               }
             },
-            child: Text(S.of(context).addNewPlantAppbarButton),
+            icon: Icon(Icons.add, size: 20,),
+            label: Text(
+              S.of(context).addNewPlantAppbarButton,
+              style:TextStyle(fontSize: 15),
+            ),
           ),
           IconButton(
             icon: Icon(Icons.help),
@@ -427,11 +431,14 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
               showDialog(
                   context: context,
                   builder: (dialogContext) => AlertDialog(
-                        title: Text(S.of(context).addNewPlantHelpTitle),
-                        content: Text(S.of(context).addNewPlantHelpContent),
+                        title: Text(S.of(context).addNewPlantHelpTitle,
+                            style: TextStyle(fontSize: 25)),
+                        content: Text(S.of(context).addNewPlantHelpContent,
+                            style: TextStyle(fontSize: 15)),
                         actions: [
                           TextButton(
-                            child: Text(S.of(context).addNewPlantHelpDismiss),
+                            child: Text(S.of(context).addNewPlantHelpDismiss,
+                                style: TextStyle(fontWeight: FontWeight.bold)),
                             onPressed: () {
                               Navigator.pop(dialogContext);
                             },
@@ -445,7 +452,7 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
       ),
       primary: false,
       body: Align(
-        alignment: Alignment.center,
+        alignment: Alignment.topCenter,
         child: Container(
           constraints: BoxConstraints(maxWidth: width * 0.9),
           padding: EdgeInsets.only(top: 5),
@@ -454,6 +461,7 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
+                  SizedBox(height:5),
                   FormBuilderTextField(
                     key: _nameFieldKey,
                     name: 'name',

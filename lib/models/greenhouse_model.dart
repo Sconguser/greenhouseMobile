@@ -11,7 +11,7 @@ part 'greenhouse_model.g.dart';
 abstract class Greenhouse with _$Greenhouse {
   const Greenhouse._();
   factory Greenhouse({
-    required int id,
+    int? id,
     required String name,
     required String location,
     required String ipAddress,

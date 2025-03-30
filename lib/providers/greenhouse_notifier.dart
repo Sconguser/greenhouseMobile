@@ -49,11 +49,29 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
     }
   }
 
-  Future<void> refresh() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      return _dummyData(); // Replace with API call
-    });
+  // Future<void> refresh() async {
+  //   state = const AsyncValue.loading();
+  //   state = await AsyncValue.guard(() async {
+  //     return _dummyData(); // Replace with API call
+  //   });
+  // }
+
+  Future<void> addNewGreenhouse(Greenhouse greenhouse) async {
+    state = AsyncValue.loading();
+    try {
+      Response response = await ref.read(httpServiceProvider).request(
+          method: HttpMethod.post,
+          endpoint: "/greenhouse/add",
+          body: greenhouse.toJson());
+      if (response.statusCode == 200) {
+        state = AsyncValue.data(await _loadGreenhouses());
+      } else {
+        throw Exception('Failed to add plant');
+      }
+    } catch (exception, stackTrace) {
+      state = AsyncError(exception, stackTrace);
+      rethrow;
+    }
   }
 
   Future<void> addNewPlantToGreenhouse(Plant plant, int id) async {

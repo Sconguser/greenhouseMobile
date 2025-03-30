@@ -72,10 +72,8 @@ class GreenhouseTile extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
                 children: [
-                  GreenhouseStatusPanel(
-                      greenhouseStatus: greenhouse.status!),
-                  GreenhouseControlPanel(
-                      greenhouseStatus: greenhouse.status!),
+                  GreenhouseStatusPanel(greenhouseStatus: greenhouse.status!),
+                  GreenhouseControlPanel(greenhouseStatus: greenhouse.status!),
                 ],
               ),
             ),
@@ -117,8 +115,8 @@ class PlantModal extends StatelessWidget {
   @override
   Widget build(BuildContext mainContext) {
     return Container(
-      constraints:
-          BoxConstraints(maxHeight: MediaQuery.of(mainContext).size.height * 0.4),
+      constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(mainContext).size.height * 0.4),
       child: Material(
         child: Navigator(
             onGenerateRoute: (_) => MaterialPageRoute(
@@ -162,13 +160,15 @@ class PlantModal extends StatelessWidget {
                                         title: Text(data[index].name),
                                         subtitle: Text(data[index].description),
                                         onTap: () {
-                                          ref
-                                              .read(greenhouseNotifierProvider
-                                                  .notifier)
-                                              .addNewPlantToGreenhouse(
-                                                  data[index], greenhouse.id);
-                                          Navigator.of(mainContext).pop();
-                                          ///todo: implement adding a new plant to a greenhouse
+                                          if (greenhouse.id != null) {
+                                            ref
+                                                .read(greenhouseNotifierProvider
+                                                    .notifier)
+                                                .addNewPlantToGreenhouse(
+                                                    data[index],
+                                                    greenhouse.id!);
+                                            Navigator.of(mainContext).pop();
+                                          }
                                         },
                                       ),
                                     );
@@ -191,6 +191,179 @@ class PlantModal extends StatelessWidget {
                         ),
                       );
                     }))),
+      ),
+    );
+  }
+}
+
+class AddNewGreenhouseButton extends StatelessWidget {
+  const AddNewGreenhouseButton({
+    super.key,
+    required this.height,
+  });
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        buildAddGreenhouseBottomSheet(context);
+      },
+      child: Container(
+        constraints: BoxConstraints(minHeight: height * 0.09),
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.all(Radius.circular(10)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.5),
+              spreadRadius: 5,
+              blurRadius: 7,
+              offset: const Offset(0, 3),
+            )
+          ],
+        ),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Future<dynamic> buildAddGreenhouseBottomSheet(
+    BuildContext context,
+  ) {
+    return showMaterialModalBottomSheet(
+        elevation: 5,
+        context: context,
+        builder: (context) {
+          return AddNewGreenhouseModal();
+        });
+  }
+}
+
+class AddNewGreenhouseModal extends ConsumerStatefulWidget {
+  const AddNewGreenhouseModal({
+    super.key,
+  });
+
+  @override
+  ConsumerState<AddNewGreenhouseModal> createState() =>
+      _AddNewGreenhouseModalState();
+}
+
+class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  final GlobalKey<FormBuilderFieldState> _nameFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+  final GlobalKey<FormBuilderFieldState> _locationFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+  final GlobalKey<FormBuilderFieldState> _ipAddressFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+
+  @override
+  Widget build(BuildContext mainContext) {
+    double width = MediaQuery.of(context).size.width;
+    double height = MediaQuery.of(context).size.height;
+    return Container(
+      constraints: BoxConstraints(maxHeight: height * 0.4),
+      child: Material(
+        child: Scaffold(
+            primary: false,
+            appBar: AppBar(
+              title: Text(
+                "add new greenhouse",
+                style: TextStyle(fontSize: 20),
+              ),
+              automaticallyImplyLeading: false,
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    _formKey.currentState?.validate();
+                    if (_formKey.currentState != null &&
+                        _formKey.currentState!.isValid) {
+                      ref
+                          .read(greenhouseNotifierProvider.notifier)
+                          .addNewGreenhouse(Greenhouse(
+                              name: _nameFieldKey.currentState!.value,
+                              location: _locationFieldKey.currentState!.value,
+                              ipAddress:
+                                  _ipAddressFieldKey.currentState!.value));
+                      Navigator.of(mainContext).pop();
+                    }
+                  },
+                  child: Text("Add greenhouse"),
+                ),
+                IconButton(
+                  icon: Icon(Icons.help),
+                  onPressed: () {},
+                ),
+              ],
+            ),
+            body: Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                constraints: BoxConstraints(maxWidth: width * 0.9),
+                padding: EdgeInsets.only(top: 5),
+                child: FormBuilder(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        FormBuilderTextField(
+                          key: _nameFieldKey,
+                          name: 'name',
+                          decoration: InputDecoration(
+                            labelText: "Greenhouse name",
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: FormBuilderValidators.compose([
+                            FormBuilderValidators.required(
+                                errorText:
+                                    S.of(context).authThisFieldCannotBeEmpty),
+                          ]),
+                        ),
+                        buildSizedBoxBetweenInputs(),
+                        FormBuilderTextField(
+                          key: _locationFieldKey,
+                          name: 'location',
+                          decoration: InputDecoration(
+                            labelText: "location",
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: FormBuilderValidators.compose([
+                            FormBuilderValidators.required(
+                                errorText:
+                                    S.of(context).authThisFieldCannotBeEmpty),
+                          ]),
+                        ),
+                        buildSizedBoxBetweenInputs(),
+                        FormBuilderTextField(
+                          key: _ipAddressFieldKey,
+                          name: 'ipAddress',
+                          decoration: InputDecoration(
+                            labelText: "IP Address",
+                            border: OutlineInputBorder(),
+                          ),
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: FormBuilderValidators.compose(
+                            [
+                              FormBuilderValidators.required(
+                                  errorText:
+                                      S.of(context).authThisFieldCannotBeEmpty),
+                              FormBuilderValidators.ip(
+                                errorText: "Musisz podać prawidłowy adres IP",
+                              )
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )),
       ),
     );
   }
@@ -394,12 +567,12 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
       ),
     );
   }
+}
 
-  SizedBox buildSizedBoxBetweenInputs() {
-    return SizedBox(
-      height: 5,
-    );
-  }
+SizedBox buildSizedBoxBetweenInputs() {
+  return SizedBox(
+    height: 5,
+  );
 }
 
 class PlantTile extends StatelessWidget {

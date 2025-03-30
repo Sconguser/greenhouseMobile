@@ -32,14 +32,20 @@ class LanguagePick extends ConsumerWidget {
         .map((locale) => Language.fromIsoCode(locale.languageCode))
         .toList();
     final language = ref.watch(languageNotifierProvider);
-    return LanguagePickerDropdown(
-      initialValue: Language.fromIsoCode(Intl.getCurrentLocale()),
-      languages: supportedLanguages,
-      onValuePicked: (Language language) {
-        ref
-            .read(languageNotifierProvider.notifier)
-            .setLanguage(language.isoCode);
-      },
+    return SafeArea(
+
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: LanguagePickerDropdown(
+          initialValue: Language.fromIsoCode(Intl.getCurrentLocale()),
+          languages: supportedLanguages,
+          onValuePicked: (Language language) {
+            ref
+                .read(languageNotifierProvider.notifier)
+                .setLanguage(language.isoCode);
+          },
+        ),
+      ),
     );
   }
 }

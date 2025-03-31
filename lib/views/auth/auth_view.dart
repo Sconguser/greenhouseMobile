@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:maker_greenhouse/providers/auth_notifier.dart';
 import 'package:maker_greenhouse/providers/language_notifier.dart';
-import 'package:maker_greenhouse/providers/routes.dart';
 import 'package:maker_greenhouse/shared/loading_indicator.dart';
 import 'package:maker_greenhouse/views/error/error_view.dart';
 
@@ -21,10 +20,10 @@ class AuthModeChooser extends StatelessWidget {
   final ValueChanged<AuthMode> onModeChanged;
 
   const AuthModeChooser({
-    Key? key,
+    super.key,
     required this.authMode,
     required this.onModeChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -70,13 +69,13 @@ class SignInForm extends ConsumerWidget {
   final GlobalKey<FormBuilderFieldState> passwordFieldKey;
 
   SignInForm({
-    Key? key,
+    super.key,
     required this.staySignedIn,
     required this.onStaySignedInChanged,
     required this.onSignIn,
     required this.usernameFieldKey,
     required this.passwordFieldKey,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -255,7 +254,7 @@ class SignUpForm extends StatelessWidget {
 }
 
 class AuthView extends ConsumerStatefulWidget {
-  const AuthView({Key? key}) : super(key: key);
+  const AuthView({super.key});
 
   @override
   ConsumerState<AuthView> createState() => _AuthViewState();
@@ -295,7 +294,7 @@ class _AuthViewState extends ConsumerState<AuthView> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           AuthModeChooser(authMode: authMode, onModeChanged: toggleAuthMode),
-          Container(
+          SizedBox(
             width: width * 0.6,
             child: authMode == AuthMode.signIn
                 ? SignInForm(

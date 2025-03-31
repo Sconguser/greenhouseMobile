@@ -4,7 +4,7 @@ import 'package:maker_greenhouse/providers/language_notifier.dart';
 import 'package:maker_greenhouse/views/settings/widgets.dart';
 
 class SettingsView extends ConsumerWidget {
-  const SettingsView({Key? key}) : super(key: key);
+  const SettingsView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

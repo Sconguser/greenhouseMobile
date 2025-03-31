@@ -1,6 +1,5 @@
 import 'package:another_xlider/another_xlider.dart';
 import 'package:another_xlider/models/tooltip/tooltip.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -599,8 +598,7 @@ class PlantTile extends StatelessWidget {
 }
 
 class GreenhouseControlPanel extends ConsumerStatefulWidget {
-  const GreenhouseControlPanel({Key? key, required this.greenhouseStatus})
-      : super(key: key);
+  const GreenhouseControlPanel({super.key, required this.greenhouseStatus});
   final GreenhouseStatus greenhouseStatus;
 
   @override

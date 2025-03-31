@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:loading_indicator/loading_indicator.dart';
 
-const List<Color> _kDefaultRainbowColors = const [
+const List<Color> _kDefaultRainbowColors = [
   Colors.red,
   Colors.orange,
   Colors.yellow,
@@ -12,13 +12,13 @@ const List<Color> _kDefaultRainbowColors = const [
 ];
 
 class LoadingIndicatorWidget extends StatelessWidget {
-  const LoadingIndicatorWidget({Key? key}) : super(key: key);
+  const LoadingIndicatorWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
-    return Container(
+    return SizedBox(
       width: width * 0.05,
       child: LoadingIndicator(
         indicatorType: Indicator.orbit,

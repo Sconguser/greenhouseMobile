@@ -21,3 +21,5 @@ final ThemeData darkTheme = ThemeData(
   dividerColor: Colors.transparent,
   // Define other properties as needed
 );
+
+double modalBottomSheetElevation = 5;

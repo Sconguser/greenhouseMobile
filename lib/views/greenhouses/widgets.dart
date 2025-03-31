@@ -7,6 +7,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:maker_greenhouse/providers/greenhouse_notifier.dart';
 import 'package:maker_greenhouse/providers/plant_list_controller_provider.dart';
 import 'package:maker_greenhouse/shared/loading_indicator.dart';
+import 'package:maker_greenhouse/shared/ui_constants.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 
 import '../../generated/l10n.dart';
@@ -64,14 +65,14 @@ class GreenhouseTile extends StatelessWidget {
           greenhouse.name,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        subtitle: Text(S.of(context).controlsLocation(greenhouse.location)),
+        // subtitle: Text(S.of(context).controlsLocation(greenhouse.location)),
         children: [
           if (greenhouse.status != null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 2.0),
               child: Column(
                 children: [
-                  GreenhouseStatusPanel(greenhouseStatus: greenhouse.status!),
+                  GreenhouseStatusPanel(greenhouse: greenhouse),
                   GreenhouseControlPanel(greenhouseStatus: greenhouse.status!),
                 ],
               ),
@@ -195,7 +196,7 @@ class PlantModal extends StatelessWidget {
   }
 }
 
-class AddNewGreenhouseButton extends StatelessWidget {
+class AddNewGreenhouseButton extends ConsumerWidget {
   const AddNewGreenhouseButton({
     super.key,
     required this.height,
@@ -204,10 +205,10 @@ class AddNewGreenhouseButton extends StatelessWidget {
   final double height;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: () {
-        buildAddGreenhouseBottomSheet(context);
+        buildAddGreenhouseBottomSheet(context, ref);
       },
       child: Container(
         constraints: BoxConstraints(minHeight: height * 0.09),
@@ -230,28 +231,57 @@ class AddNewGreenhouseButton extends StatelessWidget {
   }
 
   Future<dynamic> buildAddGreenhouseBottomSheet(
-    BuildContext context,
-  ) {
+      BuildContext context, WidgetRef ref) {
     return showMaterialModalBottomSheet(
-        elevation: 5,
+        elevation: modalBottomSheetElevation,
         context: context,
         builder: (context) {
-          return AddNewGreenhouseModal();
+          return GreenhouseModal(
+            appbarTitle: S.of(context).addNewGreenhouseAppbarTitle,
+            onAction: (name, location, ipAddress) async {
+              ref.read(greenhouseNotifierProvider.notifier).addNewGreenhouse(
+                    Greenhouse(
+                        name: name, location: location, ipAddress: ipAddress),
+                  );
+            },
+            actionIcon: Icons.add,
+            actionLabel: S.of(context).addNewGreenhouseAppbarButton,
+            helpTitle: S.of(context).addNewGreenhouseHelpTitle,
+            helpContent: S.of(context).addNewGreenhouseHelpContent,
+          );
         });
   }
 }
 
-class AddNewGreenhouseModal extends ConsumerStatefulWidget {
-  const AddNewGreenhouseModal({
+class GreenhouseModal extends ConsumerStatefulWidget {
+  final String? initialName;
+  final String? initialLocation;
+  final String? initialIpAddress;
+  final String appbarTitle;
+  final void Function(String name, String location, String ipAddress) onAction;
+  final IconData actionIcon;
+  final String actionLabel;
+  final String helpTitle;
+  final String helpContent;
+
+  const GreenhouseModal({
     super.key,
+    this.initialName,
+    this.initialLocation,
+    this.initialIpAddress,
+    required this.appbarTitle,
+    required this.onAction,
+    required this.actionIcon,
+    required this.actionLabel,
+    required this.helpTitle,
+    required this.helpContent,
   });
 
   @override
-  ConsumerState<AddNewGreenhouseModal> createState() =>
-      _AddNewGreenhouseModalState();
+  ConsumerState<GreenhouseModal> createState() => _AddNewGreenhouseModalState();
 }
 
-class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
+class _AddNewGreenhouseModalState extends ConsumerState<GreenhouseModal> {
   final _formKey = GlobalKey<FormBuilderState>();
 
   final GlobalKey<FormBuilderFieldState> _nameFieldKey =
@@ -272,7 +302,7 @@ class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
             primary: false,
             appBar: AppBar(
               title: Text(
-                S.of(context).addNewGreenhouseAppbarTitle,
+                widget.appbarTitle,
                 style: TextStyle(fontSize: 17),
               ),
               automaticallyImplyLeading: false,
@@ -282,22 +312,19 @@ class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
                     _formKey.currentState?.validate();
                     if (_formKey.currentState != null &&
                         _formKey.currentState!.isValid) {
-                      ref
-                          .read(greenhouseNotifierProvider.notifier)
-                          .addNewGreenhouse(Greenhouse(
-                              name: _nameFieldKey.currentState!.value,
-                              location: _locationFieldKey.currentState!.value,
-                              ipAddress:
-                                  _ipAddressFieldKey.currentState!.value));
+                      widget.onAction(
+                          _nameFieldKey.currentState!.value,
+                          _locationFieldKey.currentState!.value,
+                          _ipAddressFieldKey.currentState!.value);
                       Navigator.of(mainContext).pop();
                     }
                   },
                   icon: Icon(
-                    Icons.add,
+                    widget.actionIcon,
                     size: 20,
                   ),
                   label: Text(
-                    S.of(context).addNewGreenhouseAppbarButton,
+                    widget.actionLabel,
                     style: TextStyle(fontSize: 15),
                   ),
                 ),
@@ -307,16 +334,14 @@ class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
                     showDialog(
                         context: context,
                         builder: (dialogContext) => AlertDialog(
-                              title: Text(
-                                  S.of(context).addNewGreenhouseHelpTitle,
+                              title: Text(widget.helpTitle,
                                   style: TextStyle(fontSize: 25)),
                               content: Text(
                                   S.of(context).addNewGreenhouseHelpContent,
                                   style: TextStyle(fontSize: 15)),
                               actions: [
                                 TextButton(
-                                  child: Text(
-                                      S.of(context).addNewGreenhouseHelpDismiss,
+                                  child: Text(widget.helpContent,
                                       style: TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   onPressed: () {
@@ -343,6 +368,7 @@ class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
                         FormBuilderTextField(
                           key: _nameFieldKey,
                           name: 'name',
+                          initialValue: widget.initialName,
                           decoration: InputDecoration(
                             labelText: S
                                 .of(context)
@@ -359,6 +385,7 @@ class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
                         FormBuilderTextField(
                           key: _locationFieldKey,
                           name: 'location',
+                          initialValue: widget.initialLocation,
                           decoration: InputDecoration(
                             labelText: S
                                 .of(context)
@@ -375,6 +402,7 @@ class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
                         FormBuilderTextField(
                           key: _ipAddressFieldKey,
                           name: 'ipAddress',
+                          initialValue: widget.initialIpAddress,
                           decoration: InputDecoration(
                             labelText: S
                                 .of(context)
@@ -831,35 +859,105 @@ class _GreenhouseControlPanelState
   }
 }
 
-class GreenhouseStatusPanel extends StatelessWidget {
+class GreenhouseStatusPanel extends ConsumerWidget {
   const GreenhouseStatusPanel({
     super.key,
-    required this.greenhouseStatus,
+    required this.greenhouse,
   });
 
-  final GreenhouseStatus greenhouseStatus;
+  final Greenhouse greenhouse;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        Text(S.of(context).controlsStatus),
-        GreenhouseStatusIndicator(
-          greenhouseStatus: greenhouseStatus.status,
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: ExpansionTile(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-                "${S.of(context).controlsTemperature(greenhouseStatus.temperature)} $temperatureUnit"),
-            Text(
-                "${S.of(context).controlsHumidity(greenhouseStatus.humidity)} $humidityUnit"),
-            Text(
-                "${S.of(context).controlsSoilHumidity(greenhouseStatus.soilHumidity)} $humidityUnit"),
+            Text(S.of(context).controlsStatus),
+            GreenhouseStatusIndicator(
+              greenhouseStatus: greenhouse.status!.status,
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    "${S.of(context).controlsTemperature(greenhouse.status!.temperature)} $temperatureUnit"),
+                Text(
+                    "${S.of(context).controlsHumidity(greenhouse.status!.humidity)} $humidityUnit"),
+                Text(
+                    "${S.of(context).controlsSoilHumidity(greenhouse.status!.soilHumidity)} $humidityUnit"),
+              ],
+            )
           ],
-        )
-      ],
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                Text(
+                  "Detailed information",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("name: ${greenhouse.name}"),
+                        Text("location: ${greenhouse.location}"),
+                        Text("ip address: ${greenhouse.ipAddress}"),
+                      ],
+                    ),
+                    Align(
+                        alignment: Alignment.centerRight,
+                        child: IconButton(
+                          icon: Icon(Icons.edit),
+                          onPressed: () {
+                            buildEditGreenhouseBottomSheet(context, ref);
+                          },
+                        )),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
+  }
+
+  Future<dynamic> buildEditGreenhouseBottomSheet(
+      BuildContext context, WidgetRef ref) {
+    return showMaterialModalBottomSheet(
+        elevation: modalBottomSheetElevation,
+        context: context,
+        builder: (context) {
+          return GreenhouseModal(
+            appbarTitle: "Edit greenhouse",
+            onAction: (name, location, ipAddress) async {
+              ref.read(greenhouseNotifierProvider.notifier).editGreenhouse(
+                    Greenhouse(
+                      name: name,
+                      location: location,
+                      ipAddress: ipAddress,
+                    ),
+                    greenhouse.id!,
+                  );
+            },
+            initialName: greenhouse.name,
+            initialLocation: greenhouse.location,
+            initialIpAddress: greenhouse.ipAddress,
+            actionIcon: Icons.edit,
+            actionLabel: "Edit greenhouse",
+            helpTitle: "dupa",
+            helpContent: "dupadupadupa",
+          );
+        });
   }
 }

@@ -56,7 +56,40 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   //   });
   // }
 
+  Future<void> editGreenhouse(Greenhouse greenhouse, int greenhouseId) async {
+    List<Greenhouse>? previousState;
+    if (state is AsyncData<List<Greenhouse>>) {
+      previousState = (state as AsyncData<List<Greenhouse>>).value;
+    }
+    state = AsyncValue.loading();
+    try {
+      Response response = await ref.read(httpServiceProvider).request(
+          method: HttpMethod.patch,
+          endpoint: '/greenhouse/$greenhouseId',
+          body: greenhouse.toJson());
+      if (response.statusCode == 200) {
+        if (previousState != null) {
+          final utf8Body = utf8.decode(response.bodyBytes);
+          Greenhouse edited = Greenhouse.fromJson(jsonDecode(utf8Body));
+          previousState
+              .removeWhere((greenhouse) => greenhouse.id == greenhouseId);
+          previousState.add(edited);
+          state = AsyncValue.data(previousState);
+        } else {
+          state = AsyncValue.data(await _loadGreenhouses());
+        }
+      }
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
+    }
+  }
+
   Future<void> addNewGreenhouse(Greenhouse greenhouse) async {
+    List<Greenhouse>? previousState;
+    if (state is AsyncData<List<Greenhouse>>) {
+      previousState = (state as AsyncData<List<Greenhouse>>).value;
+    }
     state = AsyncValue.loading();
     try {
       Response response = await ref.read(httpServiceProvider).request(

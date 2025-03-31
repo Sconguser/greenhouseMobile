@@ -272,12 +272,12 @@ class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
             primary: false,
             appBar: AppBar(
               title: Text(
-                "add new greenhouse",
-                style: TextStyle(fontSize: 20),
+                S.of(context).addNewGreenhouseAppbarTitle,
+                style: TextStyle(fontSize: 17),
               ),
               automaticallyImplyLeading: false,
               actions: [
-                TextButton(
+                ElevatedButton.icon(
                   onPressed: () async {
                     _formKey.currentState?.validate();
                     if (_formKey.currentState != null &&
@@ -292,11 +292,41 @@ class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
                       Navigator.of(mainContext).pop();
                     }
                   },
-                  child: Text("Add greenhouse"),
+                  icon: Icon(
+                    Icons.add,
+                    size: 20,
+                  ),
+                  label: Text(
+                    S.of(context).addNewGreenhouseAppbarButton,
+                    style: TextStyle(fontSize: 15),
+                  ),
                 ),
                 IconButton(
                   icon: Icon(Icons.help),
-                  onPressed: () {},
+                  onPressed: () {
+                    showDialog(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                              title: Text(
+                                  S.of(context).addNewGreenhouseHelpTitle,
+                                  style: TextStyle(fontSize: 25)),
+                              content: Text(
+                                  S.of(context).addNewGreenhouseHelpContent,
+                                  style: TextStyle(fontSize: 15)),
+                              actions: [
+                                TextButton(
+                                  child: Text(
+                                      S.of(context).addNewGreenhouseHelpDismiss,
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  onPressed: () {
+                                    Navigator.pop(dialogContext);
+                                  },
+                                ),
+                              ],
+                            ),
+                        barrierDismissible: true);
+                  },
                 ),
               ],
             ),
@@ -314,7 +344,9 @@ class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
                           key: _nameFieldKey,
                           name: 'name',
                           decoration: InputDecoration(
-                            labelText: "Greenhouse name",
+                            labelText: S
+                                .of(context)
+                                .addNewGreenhouseTextFieldGreenhouseNameLabel,
                             border: OutlineInputBorder(),
                           ),
                           validator: FormBuilderValidators.compose([
@@ -328,7 +360,9 @@ class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
                           key: _locationFieldKey,
                           name: 'location',
                           decoration: InputDecoration(
-                            labelText: "location",
+                            labelText: S
+                                .of(context)
+                                .addNewGreenhouseTextFieldGreenhouseLocationLabel,
                             border: OutlineInputBorder(),
                           ),
                           validator: FormBuilderValidators.compose([
@@ -342,7 +376,9 @@ class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
                           key: _ipAddressFieldKey,
                           name: 'ipAddress',
                           decoration: InputDecoration(
-                            labelText: "IP Address",
+                            labelText: S
+                                .of(context)
+                                .addNewGreenhouseTextFieldGreenhouseIpAddressLabel,
                             border: OutlineInputBorder(),
                           ),
                           autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -352,7 +388,9 @@ class _AddNewGreenhouseModalState extends ConsumerState<AddNewGreenhouseModal> {
                                   errorText:
                                       S.of(context).authThisFieldCannotBeEmpty),
                               FormBuilderValidators.ip(
-                                errorText: "Musisz podać prawidłowy adres IP",
+                                errorText: S
+                                    .of(context)
+                                    .addNewGreenhouseTextFieldGreenhouseIpAddressErrorLabel,
                               )
                             ],
                           ),
@@ -398,7 +436,10 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
     double width = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
-        title: Text(S.of(context).addNewPlantAppbarTitle, style:TextStyle(fontSize: 17),),
+        title: Text(
+          S.of(context).addNewPlantAppbarTitle,
+          style: TextStyle(fontSize: 17),
+        ),
         actions: [
           ElevatedButton.icon(
             onPressed: () async {
@@ -418,10 +459,13 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
                 Navigator.of(context).pop();
               }
             },
-            icon: Icon(Icons.add, size: 20,),
+            icon: Icon(
+              Icons.add,
+              size: 20,
+            ),
             label: Text(
               S.of(context).addNewPlantAppbarButton,
-              style:TextStyle(fontSize: 15),
+              style: TextStyle(fontSize: 15),
             ),
           ),
           IconButton(
@@ -460,7 +504,7 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  SizedBox(height:5),
+                  SizedBox(height: 5),
                   FormBuilderTextField(
                     key: _nameFieldKey,
                     name: 'name',
@@ -599,6 +643,7 @@ class PlantTile extends StatelessWidget {
 
 class GreenhouseControlPanel extends ConsumerStatefulWidget {
   const GreenhouseControlPanel({super.key, required this.greenhouseStatus});
+
   final GreenhouseStatus greenhouseStatus;
 
   @override
@@ -818,189 +863,3 @@ class GreenhouseStatusPanel extends StatelessWidget {
     );
   }
 }
-// class PlantTile extends StatelessWidget {
-//   const PlantTile({
-//     Key? key,
-//     required this.plant,
-//   }) : super(key: key);
-//
-//   final Plant plant;
-//   @override
-//   Widget build(BuildContext context) {
-//     return GestureDetector(
-//       onTap: () {
-//         Navigator.push(
-//           context,
-//           MaterialPageRoute(
-//             builder: (context) => PlantDetailsPage(plant: plant),
-//           ),
-//         );
-//       },
-//       child: Container(
-//         margin: const EdgeInsets.symmetric(vertical: 10),
-//         padding: const EdgeInsets.all(16),
-//         color: Colors.transparent,
-//         child: Row(
-//           children: [
-//             // Image of the plant
-//             if (plant.image_url != null)
-//               ClipRRect(
-//                 borderRadius: BorderRadius.circular(8),
-//                 child: Image.network(
-//                   plant.image_url!,
-//                   width: 60,
-//                   height: 60,
-//                   fit: BoxFit.cover,
-//                 ),
-//               ),
-//             if (plant.image_url != null) const SizedBox(width: 12),
-//             // Plant details
-//             Expanded(
-//               child: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   Text(
-//                     plant.name,
-//                     style: Theme.of(context).textTheme.titleMedium,
-//                   ),
-//                   const SizedBox(height: 4),
-//                   Text(
-//                     plant.description,
-//                     style: Theme.of(context)
-//                         .textTheme
-//                         .bodySmall
-//                         ?.copyWith(color: Colors.grey[600]),
-//                     maxLines: 2,
-//                     overflow: TextOverflow.ellipsis,
-//                   ),
-//                 ],
-//               ),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-
-// class PlantDetails extends StatelessWidget {
-//   const PlantDetails({
-//     Key? key,
-//     required this.name,
-//     required this.description,
-//     required this.specialNeeds,
-//     required this.requiredTemperature,
-//     required this.requiredHumidity,
-//     this.imageUrl,
-//   }) : super(key: key);
-//
-//   final String name;
-//   final String description;
-//   final String specialNeeds;
-//   final String requiredTemperature;
-//   final String requiredHumidity;
-//   final String? imageUrl;
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Padding(
-//       padding: const EdgeInsets.all(16),
-//       child: SingleChildScrollView(
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             // Optional Image
-//             if (imageUrl != null)
-//               ClipRRect(
-//                 borderRadius: BorderRadius.circular(8),
-//                 child: Image.network(imageUrl!),
-//               ),
-//             const SizedBox(height: 16),
-//             // Plant Information
-//             Text(name, style: Theme.of(context).textTheme.headlineSmall),
-//             const SizedBox(height: 8),
-//             Text(description, style: Theme.of(context).textTheme.bodyMedium),
-//             const SizedBox(height: 16),
-//             Text(
-//               'Special Needs: $specialNeeds',
-//               style: Theme.of(context).textTheme.bodyMedium,
-//             ),
-//             const SizedBox(height: 8),
-//             Text(
-//               'Humidity: $requiredHumidity',
-//               style: Theme.of(context).textTheme.bodyMedium,
-//             ),
-//             const SizedBox(height: 8),
-//             Text(
-//               'Temperature: $requiredTemperature',
-//               style: Theme.of(context).textTheme.bodyMedium,
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-
-// class PlantDetailsPage extends StatelessWidget {
-//   const PlantDetailsPage({
-//     Key? key,
-//     required this.plant,
-//   }) : super(key: key);
-//
-//   final Plant plant;
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text(plant.name),
-//       ),
-//       body: Padding(
-//         padding: const EdgeInsets.all(16),
-//         child: SingleChildScrollView(
-//           child: Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               // Display Image
-//               if (plant.image_url != null)
-//                 ClipRRect(
-//                   borderRadius: BorderRadius.circular(8),
-//                   child: Image.network(
-//                     plant.image_url!,
-//                     width: double.infinity,
-//                     height: 200,
-//                     fit: BoxFit.cover,
-//                   ),
-//                 ),
-//               const SizedBox(height: 16),
-//               // Plant Details
-//               Text(plant.name,
-//                   style: Theme.of(context).textTheme.headlineSmall),
-//               const SizedBox(height: 8),
-//               Text(
-//                 plant.description,
-//                 style: Theme.of(context).textTheme.bodyMedium,
-//               ),
-//               const SizedBox(height: 16),
-//               Text(
-//                 'Special Needs: ${plant.special_needs}',
-//                 style: Theme.of(context).textTheme.bodyMedium,
-//               ),
-//               const SizedBox(height: 8),
-//               Text(
-//                 'Humidity: ${plant.required_humidity}',
-//                 style: Theme.of(context).textTheme.bodyMedium,
-//               ),
-//               const SizedBox(height: 8),
-//               Text(
-//                 'Temperature: ${plant.required_temperature}',
-//                 style: Theme.of(context).textTheme.bodyMedium,
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }

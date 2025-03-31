@@ -53,5 +53,14 @@
     "addNewPlantTemperatureSlider":"Temperature range: from {lower} {unit} to {upper} {unit}",
     "addNewPlantHumiditySlider":"Humidity range: from {lower} {unit} to {upper} {unit}",
     "addNewPlantSoilHumiditySlider":"Soil humidity range: from {lower} {unit} to {upper} {unit}",
+    "addNewGreenhouseHelpTitle":"Adding new greenhouse",
+    "addNewGreenhouseHelpDismiss":"Okay",
+    "addNewGreenhouseHelpContent":"Please provide: name of the greenhouse, its physical location and the ip address of the device in control, keep in mind, that both name and ip address need to be unique.",
+    "addNewGreenhouseAppbarButton":"Add",
+    "addNewGreenhouseAppbarTitle":"Add new greenhouse",
+    "addNewGreenhouseTextFieldGreenhouseNameLabel":"Greenhouse name",
+    "addNewGreenhouseTextFieldGreenhouseLocationLabel":"Location of the greenhouse",
+    "addNewGreenhouseTextFieldGreenhouseIpAddressLabel":"Greenhouse ip address",
+    "addNewGreenhouseTextFieldGreenhouseIpAddressErrorLabel":"A correct ip address needs to be provided",
     "test":"test"
 }

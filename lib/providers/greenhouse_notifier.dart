@@ -4,7 +4,6 @@ import 'package:http/http.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/greenhouse_model.dart';
-import '../models/greenhouse_status_model.dart';
 import '../models/plant_model.dart';
 import 'http_conf.dart';
 import 'http_service.dart';
@@ -143,120 +142,18 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
         name: "Greenhouse1",
         location: "horn",
         ipAddress: "1.1.1.1",
-        status: GreenhouseStatus(
-            temperature: 50, humidity: 30, soilHumidity: 30, status: Status.ON),
-        plants: [
-          Plant(
-            name: "Monstera",
-            description: 'Straszna',
-            minTemperature: 20,
-            maxTemperature: 40,
-            minHumidity: 20,
-            maxHumidity: 80,
-            minSoilHumidity: 30,
-            maxSoilHumidity: 70,
-          ),
-          Plant(
-            name: "Fikus",
-            description: 'Malo straszny',
-            minTemperature: 20,
-            maxTemperature: 40,
-            minHumidity: 20,
-            maxHumidity: 80,
-            minSoilHumidity: 30,
-            maxSoilHumidity: 70,
-          ),
-          Plant(
-            name: "Malpa",
-            description: 'nie lubie malp',
-            minTemperature: 20,
-            maxTemperature: 40,
-            minHumidity: 20,
-            maxHumidity: 80,
-            minSoilHumidity: 30,
-            maxSoilHumidity: 70,
-          ),
-        ],
       ),
       Greenhouse(
         id: 2,
         name: "Srenhouse1",
         location: "horn",
         ipAddress: "1.1.1.1",
-        status: GreenhouseStatus(
-            temperature: 50, humidity: 30, soilHumidity: 30, status: Status.ON),
-        plants: [
-          Plant(
-            name: "Monstera",
-            description: 'Straszna',
-            minTemperature: 20,
-            maxTemperature: 40,
-            minHumidity: 20,
-            maxHumidity: 80,
-            minSoilHumidity: 30,
-            maxSoilHumidity: 70,
-          ),
-          Plant(
-            name: "Fikus",
-            description: 'Malo straszny',
-            minTemperature: 20,
-            maxTemperature: 40,
-            minHumidity: 20,
-            maxHumidity: 80,
-            minSoilHumidity: 30,
-            maxSoilHumidity: 70,
-          ),
-          Plant(
-            name: "Malpa",
-            description: 'nie lubie malp',
-            minTemperature: 20,
-            maxTemperature: 40,
-            minHumidity: 20,
-            maxHumidity: 80,
-            minSoilHumidity: 30,
-            maxSoilHumidity: 70,
-          ),
-        ],
       ),
       Greenhouse(
         id: 3,
         name: "Srenhouse5",
         location: "horn",
         ipAddress: "1.1.1.1",
-        status: GreenhouseStatus(
-            temperature: 50, humidity: 30, soilHumidity: 30, status: Status.ON),
-        plants: [
-          Plant(
-            name: "Monstera",
-            description: 'Straszna',
-            minTemperature: 20,
-            maxTemperature: 40,
-            minHumidity: 20,
-            maxHumidity: 80,
-            minSoilHumidity: 30,
-            maxSoilHumidity: 70,
-          ),
-          Plant(
-            name: "Fikus",
-            description: 'Malo straszny',
-            minTemperature: 20,
-            maxTemperature: 40,
-            minHumidity: 20,
-            maxHumidity: 80,
-            minSoilHumidity: 30,
-            maxSoilHumidity: 70,
-          ),
-          Plant(
-            name: "Malpa",
-            description: 'nie lubie malp',
-            minTemperature: 20,
-            maxTemperature: 40,
-            minHumidity: 20,
-            maxHumidity: 80,
-            minSoilHumidity: 30,
-            maxSoilHumidity: 70,
-          ),
-        ],
       )
     ];
   }

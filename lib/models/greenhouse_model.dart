@@ -1,24 +1,39 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'greenhouse_status_model.dart';
-import 'plant_model.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:maker_greenhouse/models/has_parametrized_children.dart';
+import 'package:maker_greenhouse/models/parameter_model.dart';
+import 'package:maker_greenhouse/models/has_parameters.dart';
+import 'package:maker_greenhouse/models/zone_model.dart';
+
 
 part 'greenhouse_model.freezed.dart';
 
 part 'greenhouse_model.g.dart';
 
 @freezed
-abstract class Greenhouse with _$Greenhouse {
+abstract class Greenhouse
+    with _$Greenhouse
+    implements HasParametrizedChildren, HasParameters {
   const Greenhouse._();
+
   factory Greenhouse({
     int? id,
     required String name,
     required String location,
     required String ipAddress,
-    GreenhouseStatus? status,
-    @Default([]) List<Plant> plants,
+    @Default([]) List<Zone> zones,
+    @Default([]) List<Parameter> parameters,
   }) = _Greenhouse;
 
   factory Greenhouse.fromJson(Map<String, dynamic> json) =>
       _$GreenhouseFromJson(json);
+
+  @override
+  List<Parameter> get parameterList => parameters;
+
+  @override
+  List<HasParameters> get parametrizedChildren => zones;
+
+  @override
+  String get getName => name;
 }

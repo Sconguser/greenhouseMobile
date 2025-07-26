@@ -1,0 +1,1 @@
+enum ParameterType { TOGGLE, VALUE }

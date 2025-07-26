@@ -1,11 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maker_greenhouse/models/flowerpot_model.dart';
 import 'package:maker_greenhouse/providers/greenhouse_notifier.dart';
 import 'package:maker_greenhouse/shared/loading_indicator.dart';
 import 'package:maker_greenhouse/views/greenhouses/widgets.dart';
+import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 
+import '../../models/entity_marker.dart';
 import '../../models/greenhouse_model.dart';
 import '../../generated/l10n.dart';
+import '../../models/has_plants.dart';
 
 class ControlsView extends ConsumerWidget {
   const ControlsView({super.key});
@@ -35,12 +41,35 @@ class ControlsView extends ConsumerWidget {
         Text(S.current.error(error.toString())),
         const SizedBox(height: 16),
         ElevatedButton(
-          onPressed: () =>
-              ref.invalidate(greenhouseNotifierProvider),
+          onPressed: () => ref.invalidate(greenhouseNotifierProvider),
           child: Text(S.current.retry),
         ),
       ],
     );
+  }
+
+  Future<dynamic> buildPlantListBottomSheet(
+      BuildContext context, HasPlants entityWithPlants) {
+    return showMaterialModalBottomSheet(
+        elevation: 5,
+        context: context,
+        builder: (context) {
+          return PlantModal(
+            entityWithPlants: entityWithPlants,
+          );
+        });
+  }
+
+  void handleAddChild(EntityMarker parent, BuildContext context) async {
+    if (parent is Greenhouse) {
+      // Add Zone to Greenhouse
+    } else if (parent is Zone) {
+      // Add Flowerpot to Zone
+      // Show dialog for details, then update state
+    } else if (parent is HasPlants) {
+      buildPlantListBottomSheet(context, parent);
+    }
+    // Continue for other entity types if needed...
   }
 
   ListView _buildListView(List<Greenhouse> greenhouses, BuildContext context) {
@@ -75,7 +104,10 @@ class ControlsView extends ConsumerWidget {
               )
             ],
           ),
-          child: GreenhouseTile(greenhouse: greenhouse),
+          child: EntityTile(
+            entity: greenhouse,
+            onAddChild: handleAddChild,
+          ),
         );
       },
     );

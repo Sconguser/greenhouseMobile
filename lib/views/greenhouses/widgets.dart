@@ -4,16 +4,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:maker_greenhouse/models/has_parameters.dart';
+import 'package:maker_greenhouse/models/has_plants.dart';
 import 'package:maker_greenhouse/providers/greenhouse_notifier.dart';
 import 'package:maker_greenhouse/providers/plant_list_controller_provider.dart';
-import 'package:maker_greenhouse/shared/loading_indicator.dart';
 import 'package:maker_greenhouse/shared/ui_constants.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 
 import '../../generated/l10n.dart';
+import '../../models/entity_marker.dart';
 import '../../models/greenhouse_model.dart';
 import '../../models/greenhouse_status_model.dart';
+import '../../models/has_parametrized_children.dart';
+import '../../models/parameter_model.dart';
 import '../../models/plant_model.dart';
+import '../../shared/loading_indicator.dart';
+import '../../shared/status/parameter_list.dart';
 import '../error/error_view.dart';
 
 const String humidityUnit = "%";
@@ -49,10 +55,11 @@ class GreenhouseStatusIndicator extends StatelessWidget {
   }
 }
 
-class GreenhouseTile extends StatelessWidget {
-  const GreenhouseTile({super.key, required this.greenhouse});
+class EntityTile extends StatelessWidget {
+  const EntityTile({super.key, required this.entity, this.onAddChild});
 
-  final Greenhouse greenhouse;
+  final EntityMarker entity;
+  final void Function(EntityMarker parent, BuildContext context)? onAddChild;
 
   @override
   Widget build(BuildContext context) {
@@ -62,43 +69,49 @@ class GreenhouseTile extends StatelessWidget {
       margin: const EdgeInsets.all(8.0),
       child: ExpansionTile(
         title: Text(
-          greenhouse.name,
+          entity.getName,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         // subtitle: Text(S.of(context).controlsLocation(greenhouse.location)),
         children: [
-          if (greenhouse.status != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2.0),
-              child: Column(
-                children: [
-                  GreenhouseStatusPanel(greenhouse: greenhouse),
-                  GreenhouseControlPanel(greenhouseStatus: greenhouse.status!),
-                ],
-              ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2.0),
+            child: Column(
+              children: [
+                // GreenhouseStatusPanel(greenhouse: greenhouse),
+                if (entity is HasParameters)
+                  ParametersControlPanel(
+                    parameters: (entity as HasParameters).parameterList,
+                  ),
+                if (entity is HasParametrizedChildren)
+                  ...((entity as HasParametrizedChildren)
+                      .parametrizedChildren
+                      .map((e) => EntityTile(entity: e, onAddChild: onAddChild,))),
+              ],
             ),
-          ElevatedButton(
-            onPressed: () {
-              buildPlantListBottomSheet(context, greenhouse);
-            },
-            child: Text(S.of(context).plantAddNewPlant),
           ),
-          ...greenhouse.plants.map((plant) => PlantTile(
-                plant: plant,
-              )),
+          if (onAddChild != null)
+            ElevatedButton(
+              onPressed: () => onAddChild?.call(entity, context),
+              child: Text("Add"),
+            ),
+          if (entity is HasPlants)
+            ...(entity as HasPlants).plantList.map((plant) => PlantTile(
+                  plant: plant,
+                )),
         ],
       ),
     );
   }
 
   Future<dynamic> buildPlantListBottomSheet(
-      BuildContext context, Greenhouse greenhouse) {
+      BuildContext context, HasPlants entityWithPlants) {
     return showMaterialModalBottomSheet(
         elevation: 5,
         context: context,
         builder: (context) {
           return PlantModal(
-            greenhouse: greenhouse,
+            entityWithPlants: entityWithPlants,
           );
         });
   }
@@ -107,92 +120,97 @@ class GreenhouseTile extends StatelessWidget {
 class PlantModal extends StatelessWidget {
   const PlantModal({
     super.key,
-    required this.greenhouse,
+    required this.entityWithPlants,
   });
 
-  final Greenhouse greenhouse;
+  final HasPlants entityWithPlants;
 
   @override
   Widget build(BuildContext mainContext) {
     return Container(
-      constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(mainContext).size.height * 0.6),
-      child: Material(
-        child: Navigator(
-            onGenerateRoute: (_) => MaterialPageRoute(
-                builder: (childContext) => Builder(builder: (childContext2) {
-                      return Scaffold(
-                        primary: false,
-                        appBar: AppBar(
-                          title: Text(
-                            S.of(mainContext).addPlantToGreenhouseModalTitle(
-                                greenhouse.name),
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(childContext2)
-                                    .push(MaterialPageRoute(builder: (context) {
-                                  return AddNewPlantForm();
-                                }));
-                              },
-                              child: Text(S
-                                  .of(mainContext)
-                                  .addPlantToGreenhouseAppbarButton),
+        constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(mainContext).size.height * 0.6),
+        child: Material(
+            child: Navigator(
+                onGenerateRoute: (_) => MaterialPageRoute(
+                    builder: (childContext) =>
+                        Builder(builder: (childContext2) {
+                          return Scaffold(
+                            primary: false,
+                            appBar: AppBar(
+                              title: Text(
+                                S
+                                    .of(mainContext)
+                                    .addPlantToGreenhouseModalTitle(
+                                        entityWithPlants.getName),
+                                style: TextStyle(fontSize: 20),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(childContext2).push(
+                                        MaterialPageRoute(builder: (context) {
+                                      return AddNewPlantForm();
+                                    }));
+                                  },
+                                  child: Text(S
+                                      .of(mainContext)
+                                      .addPlantToGreenhouseAppbarButton),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        body: Consumer(
-                          builder: (BuildContext context, WidgetRef ref,
-                              Widget? child) {
-                            final plants = ref.watch(plantListNotifierProvider);
-                            return plants.when(
-                              data: (List<Plant> data) {
-                                return ListView.builder(
-                                  shrinkWrap: true,
-                                  // controller:
-                                  //     ModalScrollController.of(childContext2),
-                                  itemCount: data.length,
-                                  itemBuilder: (context, index) {
-                                    return Card(
-                                      child: ListTile(
-                                        title: Text(data[index].name),
-                                        subtitle: Text(data[index].description),
-                                        onTap: () {
-                                          if (greenhouse.id != null) {
-                                            ref
-                                                .read(greenhouseNotifierProvider
-                                                    .notifier)
-                                                .addNewPlantToGreenhouse(
-                                                    data[index],
-                                                    greenhouse.id!);
-                                            Navigator.of(mainContext).pop();
-                                          }
-                                        },
-                                      ),
+                            body: Consumer(
+                              builder: (BuildContext context, WidgetRef ref,
+                                  Widget? child) {
+                                final plants =
+                                    ref.watch(plantListNotifierProvider);
+                                return plants.when(
+                                  data: (List<Plant> data) {
+                                    return ListView.builder(
+                                      shrinkWrap: true,
+                                      // controller:
+                                      //     ModalScrollController.of(childContext2),
+                                      itemCount: data.length,
+                                      itemBuilder: (context, index) {
+                                        return Card(
+                                          child: ListTile(
+                                            title: Text(data[index].name),
+                                            subtitle:
+                                                Text(data[index].description),
+                                            onTap: () {
+                                              //TODO: zrobic
+                                              // if (greenhouse.id != null) {
+                                              //   ref
+                                              //       .read(greenhouseNotifierProvider
+                                              //           .notifier)
+                                              //       .addNewPlantToGreenhouse(
+                                              //           data[index],
+                                              //           greenhouse.id!);
+                                              // Navigator.of(mainContext).pop();
+                                              // }
+                                            },
+                                          ),
+                                        );
+                                      },
                                     );
                                   },
-                                );
-                              },
-                              error: (Object error, StackTrace stackTrace) {
-                                return ErrorScreen(
-                                  error: error,
-                                  onRetry: () {
-                                    ref.invalidate(plantListNotifierProvider);
+                                  error: (Object error, StackTrace stackTrace) {
+                                    return ErrorScreen(
+                                      error: error,
+                                      onRetry: () {
+                                        ref.invalidate(
+                                            plantListNotifierProvider);
+                                      },
+                                    );
+                                  },
+                                  loading: () {
+                                    return LoadingIndicatorWidget();
                                   },
                                 );
                               },
-                              loading: () {
-                                return LoadingIndicatorWidget();
-                              },
-                            );
-                          },
-                        ),
-                      );
-                    }))),
-      ),
-    );
+                            ),
+                          );
+                        })))));
   }
 }
 
@@ -477,12 +495,6 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
                 ref.read(plantListNotifierProvider.notifier).addPlant(Plant(
                       name: _nameFieldKey.currentState!.value,
                       description: _descriptionFieldKey.currentState!.value,
-                      minTemperature: minTemperature.floor(),
-                      maxTemperature: maxTemperature.floor(),
-                      minHumidity: minHumidity.floor(),
-                      maxHumidity: maxHumidity.floor(),
-                      minSoilHumidity: minSoilHumidity.floor(),
-                      maxSoilHumidity: maxSoilHumidity.floor(),
                     ));
                 Navigator.of(context).pop();
               }
@@ -669,35 +681,29 @@ class PlantTile extends StatelessWidget {
   }
 }
 
-class GreenhouseControlPanel extends ConsumerStatefulWidget {
-  const GreenhouseControlPanel({super.key, required this.greenhouseStatus});
+class ParametersControlPanel extends ConsumerStatefulWidget {
+  const ParametersControlPanel({super.key, required this.parameters});
 
-  final GreenhouseStatus greenhouseStatus;
+  final List<Parameter> parameters;
 
   @override
-  ConsumerState<GreenhouseControlPanel> createState() =>
-      _GreenhouseControlPanelState();
+  ConsumerState<ParametersControlPanel> createState() =>
+      _ParametersControlPanelState();
 }
 
-class _GreenhouseControlPanelState
-    extends ConsumerState<GreenhouseControlPanel> {
-  double newTemperature = 0.0; // Store in state
-  double newHumidity = 0.0;
-  double newSoilHumidity = 0.0;
+class _ParametersControlPanelState
+    extends ConsumerState<ParametersControlPanel> {
+  late List<Parameter> tempParameters;
+  final List<Parameter> changedParameters = [];
 
   @override
   void initState() {
     super.initState();
-    newTemperature = widget.greenhouseStatus.temperature;
-    newHumidity = widget.greenhouseStatus.humidity;
-    newSoilHumidity = widget.greenhouseStatus.soilHumidity;
+    tempParameters = widget.parameters.map((p) => p.copyWith()).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    double currentTemperature = widget.greenhouseStatus.temperature;
-    double currentHumidity = widget.greenhouseStatus.humidity;
-    double currentSoilHumidity = widget.greenhouseStatus.soilHumidity;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -709,16 +715,14 @@ class _GreenhouseControlPanelState
           children: [
             Column(
               children: [
-                _buildTemperatureColumn(),
-                _buildHumidityColumn(),
-                _buildSoilHumidityColumn(),
+                ...tempParameters.map((parameter) {
+                  return _buildParameterColumn(parameter);
+                }),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildChangesConfirmationButton(currentSoilHumidity,
-                        currentTemperature, currentHumidity, context),
-                    _buildChangesResetButton(currentHumidity,
-                        currentTemperature, currentSoilHumidity, context)
+                    _buildChangesConfirmationButton(context),
+                    _buildChangesResetButton(context)
                   ],
                 )
               ],
@@ -729,129 +733,66 @@ class _GreenhouseControlPanelState
     );
   }
 
-  ElevatedButton _buildChangesResetButton(
-      double currentHumidity,
-      double currentTemperature,
-      double currentSoilHumidity,
-      BuildContext context) {
+  ElevatedButton _buildChangesResetButton(BuildContext context) {
     return ElevatedButton(
         onPressed: () {
           setState(() {
-            newHumidity = currentHumidity;
-            newTemperature = currentTemperature;
-            newSoilHumidity = currentSoilHumidity;
+            tempParameters =
+                widget.parameters.map((p) => p.copyWith()).toList();
+            changedParameters.clear();
           });
         },
         child: Text(S.of(context).controlsResetChange));
   }
 
-  ElevatedButton _buildChangesConfirmationButton(double currentSoilHumidity,
-      double currentTemperature, double currentHumidity, BuildContext context) {
+  ElevatedButton _buildChangesConfirmationButton(BuildContext context) {
     return ElevatedButton(
-      onPressed: (currentSoilHumidity != newSoilHumidity ||
-              currentTemperature != newTemperature ||
-              currentHumidity != newHumidity)
-          ? () {
-              showDialog(
-                context: context,
-                builder: (_) => AlertDialog(
-                  title: Text(S.of(context).controlsDialogTitle),
-                  content: Text(S.of(context).controlsDialogContent),
-                  actions: [
-                    TextButton(
-                      child: Text(S.of(context).controlsDialogReject),
-                      onPressed: () {},
-                    ),
-                    TextButton(
-                      child: Text(S.of(context).controlsDialogAccept),
-                      onPressed: () {},
-                    ),
-                  ],
-                ),
-                barrierDismissible: true,
-              );
-            }
-          : null,
+      onPressed: () {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(S.of(context).controlsDialogTitle),
+            content: Text(S.of(context).controlsDialogContent),
+            actions: [
+              TextButton(
+                child: Text(S.of(context).controlsDialogReject),
+                onPressed: () {},
+              ),
+              TextButton(
+                child: Text(S.of(context).controlsDialogAccept),
+                onPressed: () {},
+              ),
+            ],
+          ),
+          barrierDismissible: true,
+        );
+      },
       child: Text(S.of(context).controlsConfirmChange),
     );
   }
 
-  Column _buildSoilHumidityColumn() {
+  Column _buildParameterColumn(Parameter parameter) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(S.current.soilHumidity),
-        Row(
-          children: [
-            Expanded(
-              child: FlutterSlider(
-                tooltip: FlutterSliderTooltip(rightSuffix: Text(humidityUnit)),
-                values: [newSoilHumidity],
-                max: 100,
-                min: 0,
-                onDragging: (handlerIndex, lowerValue, upperValue) {
-                  setState(() {
-                    newSoilHumidity = lowerValue;
-                  });
-                },
-              ),
-            ),
-            Text("$newSoilHumidity $humidityUnit"),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Column _buildHumidityColumn() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(S.current.humidity),
-        Row(
-          children: [
-            Expanded(
-              child: FlutterSlider(
-                tooltip: FlutterSliderTooltip(rightSuffix: Text(humidityUnit)),
-                values: [newHumidity],
-                max: 100,
-                min: 0,
-                onDragging: (handlerIndex, lowerValue, upperValue) {
-                  setState(() {
-                    newHumidity = lowerValue;
-                  });
-                },
-              ),
-            ),
-            Text("$newHumidity $humidityUnit"),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Column _buildTemperatureColumn() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(S.current.temperature),
+        Text(parameter.name),
         Row(
           children: [
             Expanded(
               child: FlutterSlider(
                 tooltip:
-                    FlutterSliderTooltip(rightSuffix: Text(temperatureUnit)),
-                values: [newTemperature],
-                max: 100,
-                min: 0,
+                    FlutterSliderTooltip(rightSuffix: Text(parameter.unit)),
+                values: [parameter.requestedValue],
+                max: parameter.max,
+                min: parameter.min,
                 onDragging: (handlerIndex, lowerValue, upperValue) {
                   setState(() {
-                    newTemperature = lowerValue;
+                    parameter = parameter.copyWith(currentValue: lowerValue);
                   });
                 },
               ),
             ),
-            Text("$newTemperature $temperatureUnit"),
+            Text("${parameter.name} ${parameter.unit}"),
           ],
         ),
       ],
@@ -871,26 +812,7 @@ class GreenhouseStatusPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       child: ExpansionTile(
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(S.of(context).controlsStatus),
-            GreenhouseStatusIndicator(
-              greenhouseStatus: greenhouse.status!.status,
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                    "${S.of(context).controlsTemperature(greenhouse.status!.temperature)} $temperatureUnit"),
-                Text(
-                    "${S.of(context).controlsHumidity(greenhouse.status!.humidity)} $humidityUnit"),
-                Text(
-                    "${S.of(context).controlsSoilHumidity(greenhouse.status!.soilHumidity)} $humidityUnit"),
-              ],
-            )
-          ],
-        ),
+        title: ParameterList(parameters: greenhouse.parameters),
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),

@@ -1,10 +1,8 @@
-
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:maker_greenhouse/models/has_parametrized_children.dart';
 import 'package:maker_greenhouse/models/parameter_model.dart';
 import 'package:maker_greenhouse/models/has_parameters.dart';
 import 'package:maker_greenhouse/models/zone_model.dart';
-
 
 part 'greenhouse_model.freezed.dart';
 
@@ -36,4 +34,7 @@ abstract class Greenhouse
 
   @override
   String get getName => name;
+
+  @override
+  int? get getId => id;
 }

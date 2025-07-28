@@ -32,4 +32,7 @@ abstract class Zone
 
   @override
   String get getName => name;
+
+  @override
+  int? get getId => id;
 }

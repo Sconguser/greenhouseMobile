@@ -1,6 +1,6 @@
-
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'entity_marker.dart';
 import 'parameter_type.dart';
 
 part 'parameter_model.freezed.dart';
@@ -8,7 +8,7 @@ part 'parameter_model.freezed.dart';
 part 'parameter_model.g.dart';
 
 @freezed
-abstract class Parameter with _$Parameter {
+abstract class Parameter with _$Parameter implements EntityMarker {
   const Parameter._();
 
   factory Parameter({
@@ -25,4 +25,10 @@ abstract class Parameter with _$Parameter {
 
   factory Parameter.fromJson(Map<String, dynamic> json) =>
       _$ParameterFromJson(json);
+
+  @override
+  String get getName => name;
+
+  @override
+  int? get getId => id;
 }

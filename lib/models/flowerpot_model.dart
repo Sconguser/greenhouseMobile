@@ -30,4 +30,7 @@ abstract class Flowerpot with _$Flowerpot implements HasPlants, HasParameters {
 
   @override
   String get getName => name;
+
+  @override
+  int? get getId => id;
 }

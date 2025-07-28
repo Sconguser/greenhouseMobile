@@ -29,4 +29,7 @@ abstract class Plant with _$Plant implements HasRequirements {
 
   @override
   String get getName => name;
+
+  @override
+  int? get getId => id;
 }

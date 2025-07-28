@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:http/http.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../models/flowerpot_model.dart';
 import '../models/greenhouse_model.dart';
 import '../models/plant_model.dart';
+import '../models/zone_model.dart';
 import 'http_conf.dart';
 import 'http_service.dart';
 
@@ -106,7 +108,38 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
     }
   }
 
-  Future<void> addNewPlantToGreenhouse(Plant plant, int id) async {
+  Future<void> addNewPlantToFlowerpot(int plantId, int flowerpotId) async {
+    List<Greenhouse>? previousState;
+    if (state is AsyncData<List<Greenhouse>>) {
+      previousState = (state as AsyncData<List<Greenhouse>>).value;
+    }
+    state = AsyncValue.loading();
+    try {
+      Response response = await ref.read(httpServiceProvider).request(
+            method: HttpMethod.put,
+            endpoint: '/flowerpot/$flowerpotId/addPlant/$plantId',
+          );
+      if (response.statusCode == 200) {
+        state = AsyncValue.data(await _loadGreenhouses());
+
+        ///TODO: zrobic to znowu z pobieraniem dobrych danych
+        // if (previousState != null) {
+        //   Greenhouse modifiedGreenhouse = await _fetchSingleGreenhouse(id);
+        //   previousState.removeWhere((greenhouse) => greenhouse.id == id);
+        //   state = AsyncValue.data([...previousState, modifiedGreenhouse]);
+        // } else {
+        //   state = AsyncValue.data(await _loadGreenhouses());
+        // }
+      } else {
+        throw Exception('Failed to add plant to greenhouse');
+      }
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<void> addNewZoneToGreenhouse(Zone zone, int id) async {
     List<Greenhouse>? previousState;
     if (state is AsyncData<List<Greenhouse>>) {
       previousState = (state as AsyncData<List<Greenhouse>>).value;
@@ -115,8 +148,8 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
     try {
       Response response = await ref.read(httpServiceProvider).request(
             method: HttpMethod.post,
-            endpoint: '/greenhouse/addPlant/$id',
-            body: plant.toJson(),
+            endpoint: '/greenhouse/$id/addZone',
+            body: zone.toJson(),
           );
       if (response.statusCode == 200) {
         if (previousState != null) {
@@ -127,7 +160,39 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
           state = AsyncValue.data(await _loadGreenhouses());
         }
       } else {
-        throw Exception('Failed to add plant to greenhouse');
+        throw Exception('Failed to add zone to greenhouse');
+      }
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<void> addNewFlowerpotToZone(Flowerpot flowerpot, int id) async {
+    List<Greenhouse>? previousState;
+    if (state is AsyncData<List<Greenhouse>>) {
+      previousState = (state as AsyncData<List<Greenhouse>>).value;
+    }
+    state = AsyncValue.loading();
+    try {
+      Response response = await ref.read(httpServiceProvider).request(
+            method: HttpMethod.post,
+            endpoint: '/zone/$id/addFlowerpot',
+            body: flowerpot.toJson(),
+          );
+      if (response.statusCode == 200) {
+        state = AsyncValue.data(await _loadGreenhouses());
+
+        ///TODO: zrobic to od nowa z dobrym wyszukiwaniem które dane pobireać
+        // if (previousState != null) {
+        //   Greenhouse modifiedGreenhouse = await _fetchSingleGreenhouse(id);
+        //   previousState.removeWhere((greenhouse) => greenhouse.id == id);
+        //   state = AsyncValue.data([...previousState, modifiedGreenhouse]);
+        // } else {
+        //   state = AsyncValue.data(await _loadGreenhouses());
+        // }
+      } else {
+        throw Exception('Failed to add flowerpot to greenhouse');
       }
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);

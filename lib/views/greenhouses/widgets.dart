@@ -17,6 +17,7 @@ import '../../models/greenhouse_model.dart';
 import '../../models/greenhouse_status_model.dart';
 import '../../models/has_parametrized_children.dart';
 import '../../models/parameter_model.dart';
+import '../../models/zone_model.dart';
 import '../../models/plant_model.dart';
 import '../../shared/loading_indicator.dart';
 import '../../shared/status/parameter_list.dart';
@@ -55,17 +56,23 @@ class GreenhouseStatusIndicator extends StatelessWidget {
   }
 }
 
-class EntityTile extends StatelessWidget {
-  const EntityTile({super.key, required this.entity, this.onAddChild});
+class EntityTile extends ConsumerWidget {
+  const EntityTile(
+      {super.key,
+      required this.entity,
+      this.onAddChild,
+      required this.elevation});
 
   final EntityMarker entity;
-  final void Function(EntityMarker parent, BuildContext context)? onAddChild;
+  final void Function(EntityMarker parent, BuildContext context, WidgetRef ref)?
+      onAddChild;
+  final double elevation;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       color: Colors.white,
-      elevation: 0,
+      elevation: elevation,
       margin: const EdgeInsets.all(8.0),
       child: ExpansionTile(
         title: Text(
@@ -86,19 +93,23 @@ class EntityTile extends StatelessWidget {
                 if (entity is HasParametrizedChildren)
                   ...((entity as HasParametrizedChildren)
                       .parametrizedChildren
-                      .map((e) => EntityTile(entity: e, onAddChild: onAddChild,))),
+                      .map((e) => EntityTile(
+                            entity: e,
+                            onAddChild: onAddChild,
+                    elevation: 2,
+                          ))),
               ],
             ),
           ),
-          if (onAddChild != null)
-            ElevatedButton(
-              onPressed: () => onAddChild?.call(entity, context),
-              child: Text("Add"),
-            ),
           if (entity is HasPlants)
             ...(entity as HasPlants).plantList.map((plant) => PlantTile(
                   plant: plant,
                 )),
+          if (onAddChild != null)
+            ElevatedButton(
+              onPressed: () => onAddChild?.call(entity, context, ref),
+              child: Text("Add"),
+            ),
         ],
       ),
     );
@@ -178,16 +189,19 @@ class PlantModal extends StatelessWidget {
                                             subtitle:
                                                 Text(data[index].description),
                                             onTap: () {
-                                              //TODO: zrobic
-                                              // if (greenhouse.id != null) {
-                                              //   ref
-                                              //       .read(greenhouseNotifierProvider
-                                              //           .notifier)
-                                              //       .addNewPlantToGreenhouse(
-                                              //           data[index],
-                                              //           greenhouse.id!);
-                                              // Navigator.of(mainContext).pop();
-                                              // }
+                                              if (entityWithPlants.getId !=
+                                                      null &&
+                                                  data[index].getId != null) {
+                                                ref
+                                                    .read(
+                                                        greenhouseNotifierProvider
+                                                            .notifier)
+                                                    .addNewPlantToFlowerpot(
+                                                        data[index].getId!,
+                                                        entityWithPlants
+                                                            .getId!);
+                                                Navigator.of(mainContext).pop();
+                                              }
                                             },
                                           ),
                                         );
@@ -452,6 +466,466 @@ class _AddNewGreenhouseModalState extends ConsumerState<GreenhouseModal> {
   }
 }
 
+class FlowerpotModal extends ConsumerStatefulWidget {
+  final String? initialName;
+  final String appbarTitle;
+  final void Function(String name) onAction;
+  final IconData actionIcon;
+  final String actionLabel;
+  final String helpTitle;
+  final String helpContent;
+
+  const FlowerpotModal({
+    super.key,
+    this.initialName,
+    required this.appbarTitle,
+    required this.onAction,
+    required this.actionIcon,
+    required this.actionLabel,
+    required this.helpTitle,
+    required this.helpContent,
+  });
+
+  @override
+  ConsumerState<FlowerpotModal> createState() => _FlowerpotModalState();
+}
+
+class _FlowerpotModalState extends ConsumerState<FlowerpotModal> {
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  final GlobalKey<FormBuilderFieldState> _nameFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+
+  @override
+  Widget build(BuildContext mainContext) {
+    double width = MediaQuery.of(context).size.width;
+    double height = MediaQuery.of(context).size.height;
+    return Container(
+      constraints: BoxConstraints(maxHeight: height * 0.4),
+      child: Material(
+        child: Scaffold(
+            primary: false,
+            appBar: AppBar(
+              title: Text(
+                widget.appbarTitle,
+                style: TextStyle(fontSize: 17),
+              ),
+              automaticallyImplyLeading: false,
+              actions: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    _formKey.currentState?.validate();
+                    if (_formKey.currentState != null &&
+                        _formKey.currentState!.isValid) {
+                      widget.onAction(_nameFieldKey.currentState!.value);
+                      Navigator.of(mainContext).pop();
+                    }
+                  },
+                  icon: Icon(
+                    widget.actionIcon,
+                    size: 20,
+                  ),
+                  label: Text(
+                    widget.actionLabel,
+                    style: TextStyle(fontSize: 15),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.help),
+                  onPressed: () {
+                    showDialog(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                              title: Text(widget.helpTitle,
+                                  style: TextStyle(fontSize: 25)),
+                              content: Text(
+                                  "Add new flowerpot content placeholder",
+                                  style: TextStyle(fontSize: 15)),
+                              actions: [
+                                TextButton(
+                                  child: Text(widget.helpContent,
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  onPressed: () {
+                                    Navigator.pop(dialogContext);
+                                  },
+                                ),
+                              ],
+                            ),
+                        barrierDismissible: true);
+                  },
+                ),
+              ],
+            ),
+            body: Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                constraints: BoxConstraints(maxWidth: width * 0.9),
+                padding: EdgeInsets.only(top: 5),
+                child: FormBuilder(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        FormBuilderTextField(
+                          key: _nameFieldKey,
+                          name: 'name',
+                          initialValue: widget.initialName,
+                          decoration: InputDecoration(
+                            labelText: S
+                                .of(context)
+                                .addNewGreenhouseTextFieldGreenhouseNameLabel,
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: FormBuilderValidators.compose([
+                            FormBuilderValidators.required(
+                                errorText:
+                                    S.of(context).authThisFieldCannotBeEmpty),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )),
+      ),
+    );
+  }
+}
+
+class ZoneModal extends ConsumerStatefulWidget {
+  final String? initialName;
+  final String appbarTitle;
+  final void Function(String name) onAction;
+  final IconData actionIcon;
+  final String actionLabel;
+  final String helpTitle;
+  final String helpContent;
+
+  const ZoneModal({
+    super.key,
+    this.initialName,
+    required this.appbarTitle,
+    required this.onAction,
+    required this.actionIcon,
+    required this.actionLabel,
+    required this.helpTitle,
+    required this.helpContent,
+  });
+
+  @override
+  ConsumerState<ZoneModal> createState() => _ZoneModalState();
+}
+
+class _ZoneModalState extends ConsumerState<ZoneModal> {
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  final GlobalKey<FormBuilderFieldState> _nameFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+
+  @override
+  Widget build(BuildContext mainContext) {
+    double width = MediaQuery.of(context).size.width;
+    double height = MediaQuery.of(context).size.height;
+    return Container(
+      constraints: BoxConstraints(maxHeight: height * 0.4),
+      child: Material(
+        child: Scaffold(
+            primary: false,
+            appBar: AppBar(
+              title: Text(
+                widget.appbarTitle,
+                style: TextStyle(fontSize: 17),
+              ),
+              automaticallyImplyLeading: false,
+              actions: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    _formKey.currentState?.validate();
+                    if (_formKey.currentState != null &&
+                        _formKey.currentState!.isValid) {
+                      widget.onAction(_nameFieldKey.currentState!.value);
+                      Navigator.of(mainContext).pop();
+                    }
+                  },
+                  icon: Icon(
+                    widget.actionIcon,
+                    size: 20,
+                  ),
+                  label: Text(
+                    widget.actionLabel,
+                    style: TextStyle(fontSize: 15),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.help),
+                  onPressed: () {
+                    showDialog(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                              title: Text(widget.helpTitle,
+                                  style: TextStyle(fontSize: 25)),
+                              content: Text("Add new zone content placeholder",
+                                  style: TextStyle(fontSize: 15)),
+                              actions: [
+                                TextButton(
+                                  child: Text(widget.helpContent,
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  onPressed: () {
+                                    Navigator.pop(dialogContext);
+                                  },
+                                ),
+                              ],
+                            ),
+                        barrierDismissible: true);
+                  },
+                ),
+              ],
+            ),
+            body: Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                constraints: BoxConstraints(maxWidth: width * 0.9),
+                padding: EdgeInsets.only(top: 5),
+                child: FormBuilder(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        FormBuilderTextField(
+                          key: _nameFieldKey,
+                          name: 'name',
+                          initialValue: widget.initialName,
+                          decoration: InputDecoration(
+                            labelText: S
+                                .of(context)
+                                .addNewGreenhouseTextFieldGreenhouseNameLabel,
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: FormBuilderValidators.compose([
+                            FormBuilderValidators.required(
+                                errorText:
+                                    S.of(context).authThisFieldCannotBeEmpty),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )),
+      ),
+    );
+  }
+}
+
+class AddNewFlowerpotForm extends ConsumerStatefulWidget {
+  const AddNewFlowerpotForm({super.key, required this.zone});
+
+  final Zone zone;
+
+  @override
+  ConsumerState<AddNewFlowerpotForm> createState() =>
+      _AddNewFlowerpotFormState();
+}
+
+class _AddNewFlowerpotFormState extends ConsumerState<AddNewFlowerpotForm> {
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  final GlobalKey<FormBuilderFieldState> _flowerpotNameFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+
+  @override
+  Widget build(BuildContext context) {
+    double width = MediaQuery.of(context).size.width;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          "Add new flowerpot",
+          style: TextStyle(fontSize: 17),
+        ),
+        actions: [
+          ElevatedButton.icon(
+            onPressed: () async {
+              _formKey.currentState?.validate();
+              if (_formKey.currentState != null &&
+                  _formKey.currentState!.isValid) {
+                /// TODO: add
+                Navigator.of(context).pop();
+              }
+            },
+            icon: Icon(
+              Icons.add,
+              size: 20,
+            ),
+            label: Text(
+              "Add new flowerpot",
+              style: TextStyle(fontSize: 15),
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.help),
+            onPressed: () {
+              showDialog(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                        title: Text("Add new flowerpot placeholder",
+                            style: TextStyle(fontSize: 25)),
+                        content: Text("Add new flowerpot content",
+                            style: TextStyle(fontSize: 15)),
+                        actions: [
+                          TextButton(
+                            child: Text("Add new flowerpot dismiss",
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            onPressed: () {
+                              Navigator.pop(dialogContext);
+                            },
+                          ),
+                        ],
+                      ),
+                  barrierDismissible: true);
+            },
+          )
+        ],
+      ),
+      primary: false,
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: Container(
+          constraints: BoxConstraints(maxWidth: width * 0.9),
+          padding: EdgeInsets.only(top: 5),
+          child: FormBuilder(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  SizedBox(height: 5),
+                  FormBuilderTextField(
+                    key: _flowerpotNameFieldKey,
+                    name: 'name',
+                    decoration: InputDecoration(
+                      labelText: "Add new flowerpot",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: FormBuilderValidators.compose([
+                      FormBuilderValidators.required(
+                          errorText: S.of(context).authThisFieldCannotBeEmpty),
+                    ]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AddNewZoneForm extends ConsumerStatefulWidget {
+  const AddNewZoneForm({super.key, required this.greenhouse});
+
+  final Greenhouse greenhouse;
+
+  @override
+  ConsumerState<AddNewZoneForm> createState() => _AddNewZoneFormState();
+}
+
+class _AddNewZoneFormState extends ConsumerState<AddNewZoneForm> {
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  final GlobalKey<FormBuilderFieldState> _zoneNameFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+
+  @override
+  Widget build(BuildContext context) {
+    double width = MediaQuery.of(context).size.width;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          S.of(context).addNewPlantAppbarTitle,
+          style: TextStyle(fontSize: 17),
+        ),
+        actions: [
+          ElevatedButton.icon(
+            onPressed: () async {
+              _formKey.currentState?.validate();
+              if (_formKey.currentState != null &&
+                  _formKey.currentState!.isValid) {
+                /// TODO: add
+                Navigator.of(context).pop();
+              }
+            },
+            icon: Icon(
+              Icons.add,
+              size: 20,
+            ),
+            label: Text(
+              "Add new zone",
+              style: TextStyle(fontSize: 15),
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.help),
+            onPressed: () {
+              showDialog(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                        title: Text("Add new zone placeholder",
+                            style: TextStyle(fontSize: 25)),
+                        content: Text("Add new zone content",
+                            style: TextStyle(fontSize: 15)),
+                        actions: [
+                          TextButton(
+                            child: Text("Add new zone dismiss",
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            onPressed: () {
+                              Navigator.pop(dialogContext);
+                            },
+                          ),
+                        ],
+                      ),
+                  barrierDismissible: true);
+            },
+          )
+        ],
+      ),
+      primary: false,
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: Container(
+          constraints: BoxConstraints(maxWidth: width * 0.9),
+          padding: EdgeInsets.only(top: 5),
+          child: FormBuilder(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  SizedBox(height: 5),
+                  FormBuilderTextField(
+                    key: _zoneNameFieldKey,
+                    name: 'name',
+                    decoration: InputDecoration(
+                      labelText: "Add new flowerpot",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: FormBuilderValidators.compose([
+                      FormBuilderValidators.required(
+                          errorText: S.of(context).authThisFieldCannotBeEmpty),
+                    ]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class AddNewPlantForm extends ConsumerStatefulWidget {
   const AddNewPlantForm({
     super.key,
@@ -470,13 +944,6 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
   final GlobalKey<FormBuilderFieldState> _descriptionFieldKey =
       GlobalKey<FormBuilderFieldState>();
 
-  double minTemperature = 10;
-  double maxTemperature = 40;
-  double minHumidity = 10;
-  double maxHumidity = 40;
-  double minSoilHumidity = 10;
-  double maxSoilHumidity = 40;
-
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
@@ -492,10 +959,10 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
               _formKey.currentState?.validate();
               if (_formKey.currentState != null &&
                   _formKey.currentState!.isValid) {
-                ref.read(plantListNotifierProvider.notifier).addPlant(Plant(
-                      name: _nameFieldKey.currentState!.value,
-                      description: _descriptionFieldKey.currentState!.value,
-                    ));
+                // ref.read(plantListNotifierProvider.notifier).addPlant(Plant(
+                //       name: _nameFieldKey.currentState!.value,
+                //       description: _descriptionFieldKey.currentState!.value,
+                //     ));
                 Navigator.of(context).pop();
               }
             },
@@ -570,85 +1037,6 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
                       FormBuilderValidators.required(
                           errorText: S.of(context).authThisFieldCannotBeEmpty),
                     ]),
-                  ),
-                  buildSizedBoxBetweenInputs(),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(S.of(context).addNewPlantTemperatureSlider(
-                          minTemperature, temperatureUnit, maxTemperature)),
-                      FlutterSlider(
-                        selectByTap: false,
-                        tooltip: FlutterSliderTooltip(
-                          leftPrefix: Text("Min:"),
-                          leftSuffix: Text(temperatureUnit),
-                          rightPrefix: Text("Max"),
-                          rightSuffix: Text(temperatureUnit),
-                        ),
-                        values: [minTemperature, maxTemperature],
-                        max: 100,
-                        min: 0,
-                        rangeSlider: true,
-                        onDragging: (handlerIndex, lowerValue, upperValue) {
-                          setState(() {
-                            minTemperature = lowerValue;
-                            maxTemperature = upperValue;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(S.of(context).addNewPlantHumiditySlider(
-                          minHumidity, humidityUnit, maxHumidity)),
-                      FlutterSlider(
-                        selectByTap: false,
-                        tooltip: FlutterSliderTooltip(
-                          leftPrefix: Text("Min:"),
-                          leftSuffix: Text(humidityUnit),
-                          rightPrefix: Text("Max"),
-                          rightSuffix: Text(humidityUnit),
-                        ),
-                        values: [minHumidity, maxHumidity],
-                        max: 100,
-                        min: 0,
-                        rangeSlider: true,
-                        onDragging: (handlerIndex, lowerValue, upperValue) {
-                          setState(() {
-                            minHumidity = lowerValue;
-                            maxHumidity = upperValue;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(S.of(context).addNewPlantSoilHumiditySlider(
-                          minSoilHumidity, humidityUnit, maxSoilHumidity)),
-                      FlutterSlider(
-                        selectByTap: false,
-                        tooltip: FlutterSliderTooltip(
-                          leftPrefix: Text("Min:"),
-                          leftSuffix: Text(humidityUnit),
-                          rightPrefix: Text("Max"),
-                          rightSuffix: Text(humidityUnit),
-                        ),
-                        values: [minSoilHumidity, maxSoilHumidity],
-                        max: 100,
-                        min: 0,
-                        rangeSlider: true,
-                        onDragging: (handlerIndex, lowerValue, upperValue) {
-                          setState(() {
-                            minSoilHumidity = lowerValue;
-                            maxSoilHumidity = upperValue;
-                          });
-                        },
-                      ),
-                    ],
                   ),
                 ],
               ),

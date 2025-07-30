@@ -1,6 +1,7 @@
 import 'package:another_xlider/another_xlider.dart';
 import 'package:another_xlider/models/tooltip/tooltip.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -17,6 +18,7 @@ import '../../models/greenhouse_model.dart';
 import '../../models/greenhouse_status_model.dart';
 import '../../models/has_parametrized_children.dart';
 import '../../models/parameter_model.dart';
+import '../../models/parameter_type.dart';
 import '../../models/zone_model.dart';
 import '../../models/plant_model.dart';
 import '../../shared/loading_indicator.dart';
@@ -96,7 +98,7 @@ class EntityTile extends ConsumerWidget {
                       .map((e) => EntityTile(
                             entity: e,
                             onAddChild: onAddChild,
-                    elevation: 2,
+                            elevation: 2,
                           ))),
               ],
             ),
@@ -280,8 +282,207 @@ class AddNewGreenhouseButton extends ConsumerWidget {
             actionLabel: S.of(context).addNewGreenhouseAppbarButton,
             helpTitle: S.of(context).addNewGreenhouseHelpTitle,
             helpContent: S.of(context).addNewGreenhouseHelpContent,
+            parameters: [],
           );
         });
+  }
+}
+
+class ParameterForm extends ConsumerStatefulWidget {
+  const ParameterForm({super.key, required this.onSubmit});
+
+  final void Function(Parameter parameter) onSubmit;
+
+  @override
+  ConsumerState<ParameterForm> createState() => _ParameterFormState();
+}
+
+class _ParameterFormState extends ConsumerState<ParameterForm> {
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  final GlobalKey<FormBuilderFieldState> _nameFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+  final GlobalKey<FormBuilderFieldState> _minMaxFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+  final GlobalKey<FormBuilderFieldState> _unitFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+  final GlobalKey<FormBuilderFieldState> _parameterTypeFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+  final GlobalKey<FormBuilderFieldState> _mutableFieldKey =
+      GlobalKey<FormBuilderFieldState>();
+
+  @override
+  Widget build(BuildContext context) {
+    double width = MediaQuery.of(context).size.width;
+    return Column(
+      children: [
+        Align(
+          alignment: Alignment.topCenter,
+          child: Container(
+            constraints: BoxConstraints(maxWidth: width * 0.9),
+            padding: EdgeInsets.only(top: 5),
+            child: FormBuilder(
+              key: _formKey,
+              child: Column(
+                children: [
+                  SizedBox(height: 5),
+                  FormBuilderTextField(
+                    key: _nameFieldKey,
+                    name: 'name',
+                    decoration: InputDecoration(
+                      labelText: "Parameter name",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: FormBuilderValidators.compose([
+                      FormBuilderValidators.required(
+                          errorText: S.of(context).authThisFieldCannotBeEmpty),
+                    ]),
+                  ),
+                  buildSizedBoxBetweenInputs(),
+                  FormBuilderRangeSlider(
+                    key: _minMaxFieldKey,
+                    name: 'minMaxRange',
+                    min: -100,
+                    max: 100,
+                    initialValue: RangeValues(-10, 10),
+                    decoration: InputDecoration(
+                        labelText: "Range of values",
+                        border: OutlineInputBorder()),
+                  ),
+                  buildSizedBoxBetweenInputs(),
+                  FormBuilderTextField(
+                    key: _unitFieldKey,
+                    name: "unit",
+                    decoration: InputDecoration(
+                      labelText: "unit",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: FormBuilderValidators.compose([
+                      FormBuilderValidators.required(
+                          errorText: S.of(context).authThisFieldCannotBeEmpty),
+                    ]),
+                    maxLength: 5,
+                    maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  ),
+                  buildSizedBoxBetweenInputs(),
+                  FormBuilderCheckbox(
+                    key: _mutableFieldKey,
+                    name: "mutable",
+                    title: Text("Is mutable"),
+                    decoration: InputDecoration(
+                      labelText: "Mutable parameter",
+                      border: OutlineInputBorder(),
+                    ),
+                    initialValue: true,
+                    onChanged: (isMutable) {},
+                  ),
+                  buildSizedBoxBetweenInputs(),
+                  FormBuilderRadioGroup(
+                    key: _parameterTypeFieldKey,
+                    name: "parameterType",
+                    decoration: InputDecoration(
+                      labelText: "Parameter type",
+                      border: OutlineInputBorder(),
+                    ),
+                    initialValue: "Toggle",
+                    options: [
+                      FormBuilderFieldOption(
+                        value: "Toggle",
+                      ),
+                      FormBuilderFieldOption(
+                        value: "Value",
+                      )
+                    ],
+                  ),
+                  buildSizedBoxBetweenInputs(),
+                ],
+              ),
+            ),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            _formKey.currentState?.validate();
+            if (_formKey.currentState != null &&
+                _formKey.currentState!.isValid) {
+              widget.onSubmit.call(Parameter(
+                name: _nameFieldKey.currentState!.value,
+                mutable: _mutableFieldKey.currentState!.value,
+                unit: _unitFieldKey.currentState!.value,
+                type: ParameterType.values.byName(
+                    _parameterTypeFieldKey.currentState!.value.toUpperCase()),
+                min: _minMaxFieldKey.currentState!.value.start,
+                max: _minMaxFieldKey.currentState!.value.end,
+                currentValue: -1,
+                requestedValue: -1,
+              ));
+            }
+          },
+          child: Text("Add parameter"),
+        ),
+      ],
+    );
+  }
+}
+
+class ParameterList extends StatefulWidget {
+  const ParameterList({super.key, required this.parameterList});
+
+  final List<Parameter> parameterList;
+
+  @override
+  State<ParameterList> createState() => _ParameterListState();
+}
+
+class _ParameterListState extends State<ParameterList> {
+  late List<Parameter> tempParameterList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    for (var parameter in widget.parameterList) {
+      tempParameterList.add(parameter.copyWith());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          "Parameters:",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        Flexible(
+          child: ListView.builder(
+              physics: NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              // padding: const EdgeInsets.all(16.0),
+              itemCount: widget.parameterList.length + 1,
+              // Add 1 for the button
+              itemBuilder: (context, index) {
+                if (index == widget.parameterList.length) {
+                  return ExpansionTile(
+                    title: Text("Add new parameter"),
+                    children: [
+                      ParameterForm(
+                        onSubmit: (parameter) {
+                          setState(() {
+                            widget.parameterList.add(parameter);
+                          });
+                        },
+                      ),
+                    ],
+                  );
+                }
+                return Card(
+                  child: Text(widget.parameterList.elementAt(index).getName),
+                );
+              }),
+        ),
+      ],
+    );
   }
 }
 
@@ -289,6 +490,7 @@ class GreenhouseModal extends ConsumerStatefulWidget {
   final String? initialName;
   final String? initialLocation;
   final String? initialIpAddress;
+  final List<Parameter> parameters;
   final String appbarTitle;
   final void Function(String name, String location, String ipAddress) onAction;
   final IconData actionIcon;
@@ -307,6 +509,7 @@ class GreenhouseModal extends ConsumerStatefulWidget {
     required this.actionLabel,
     required this.helpTitle,
     required this.helpContent,
+    required this.parameters,
   });
 
   @override
@@ -455,6 +658,10 @@ class _AddNewGreenhouseModalState extends ConsumerState<GreenhouseModal> {
                             ],
                           ),
                         ),
+                        Expanded(
+                          child:
+                              ParameterList(parameterList: widget.parameters),
+                        )
                       ],
                     ),
                   ),
@@ -959,10 +1166,10 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
               _formKey.currentState?.validate();
               if (_formKey.currentState != null &&
                   _formKey.currentState!.isValid) {
-                // ref.read(plantListNotifierProvider.notifier).addPlant(Plant(
-                //       name: _nameFieldKey.currentState!.value,
-                //       description: _descriptionFieldKey.currentState!.value,
-                //     ));
+                ref.read(plantListNotifierProvider.notifier).addPlant(Plant(
+                      name: _nameFieldKey.currentState!.value,
+                      description: _descriptionFieldKey.currentState!.value,
+                    ));
                 Navigator.of(context).pop();
               }
             },
@@ -1187,87 +1394,87 @@ class _ParametersControlPanelState
     );
   }
 }
-
-class GreenhouseStatusPanel extends ConsumerWidget {
-  const GreenhouseStatusPanel({
-    super.key,
-    required this.greenhouse,
-  });
-
-  final Greenhouse greenhouse;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      child: ExpansionTile(
-        title: ParameterList(parameters: greenhouse.parameters),
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-                Text(
-                  "Detailed information",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("name: ${greenhouse.name}"),
-                        Text("location: ${greenhouse.location}"),
-                        Text("ip address: ${greenhouse.ipAddress}"),
-                      ],
-                    ),
-                    Align(
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          icon: Icon(Icons.edit),
-                          onPressed: () {
-                            buildEditGreenhouseBottomSheet(context, ref);
-                          },
-                        )),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<dynamic> buildEditGreenhouseBottomSheet(
-      BuildContext context, WidgetRef ref) {
-    return showMaterialModalBottomSheet(
-        elevation: modalBottomSheetElevation,
-        context: context,
-        builder: (context) {
-          return GreenhouseModal(
-            appbarTitle: "Edit greenhouse",
-            onAction: (name, location, ipAddress) async {
-              ref.read(greenhouseNotifierProvider.notifier).editGreenhouse(
-                    Greenhouse(
-                      name: name,
-                      location: location,
-                      ipAddress: ipAddress,
-                    ),
-                    greenhouse.id!,
-                  );
-            },
-            initialName: greenhouse.name,
-            initialLocation: greenhouse.location,
-            initialIpAddress: greenhouse.ipAddress,
-            actionIcon: Icons.edit,
-            actionLabel: "Edit greenhouse",
-            helpTitle: "dupa",
-            helpContent: "dupadupadupa",
-          );
-        });
-  }
-}
+//
+// class GreenhouseStatusPanel extends ConsumerWidget {
+//   const GreenhouseStatusPanel({
+//     super.key,
+//     required this.greenhouse,
+//   });
+//
+//   final Greenhouse greenhouse;
+//
+//   @override
+//   Widget build(BuildContext context, WidgetRef ref) {
+//     return Card(
+//       child: ExpansionTile(
+//         title: ParameterList(parameters: greenhouse.parameters),
+//         children: [
+//           Padding(
+//             padding: const EdgeInsets.all(8.0),
+//             child: Column(
+//               children: [
+//                 Text(
+//                   "Detailed information",
+//                   style: TextStyle(
+//                     fontWeight: FontWeight.bold,
+//                     fontSize: 18,
+//                   ),
+//                 ),
+//                 Row(
+//                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                   children: [
+//                     Column(
+//                       crossAxisAlignment: CrossAxisAlignment.start,
+//                       children: [
+//                         Text("name: ${greenhouse.name}"),
+//                         Text("location: ${greenhouse.location}"),
+//                         Text("ip address: ${greenhouse.ipAddress}"),
+//                       ],
+//                     ),
+//                     Align(
+//                         alignment: Alignment.centerRight,
+//                         child: IconButton(
+//                           icon: Icon(Icons.edit),
+//                           onPressed: () {
+//                             buildEditGreenhouseBottomSheet(context, ref);
+//                           },
+//                         )),
+//                   ],
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+//
+//   Future<dynamic> buildEditGreenhouseBottomSheet(
+//       BuildContext context, WidgetRef ref) {
+//     return showMaterialModalBottomSheet(
+//         elevation: modalBottomSheetElevation,
+//         context: context,
+//         builder: (context) {
+//           return GreenhouseModal(
+//             appbarTitle: "Edit greenhouse",
+//             onAction: (name, location, ipAddress) async {
+//               ref.read(greenhouseNotifierProvider.notifier).editGreenhouse(
+//                     Greenhouse(
+//                       name: name,
+//                       location: location,
+//                       ipAddress: ipAddress,
+//                     ),
+//                     greenhouse.id!,
+//                   );
+//             },
+//             initialName: greenhouse.name,
+//             initialLocation: greenhouse.location,
+//             initialIpAddress: greenhouse.ipAddress,
+//             actionIcon: Icons.edit,
+//             actionLabel: "Edit greenhouse",
+//             helpTitle: "dupa",
+//             helpContent: "dupadupadupa",
+//           );
+//         });
+//   }
+// }

@@ -20,7 +20,7 @@ abstract class Parameter with _$Parameter implements EntityMarker {
     required double min,
     required double max,
     required String unit,
-    required ParameterType type,
+    required ParameterType parameterType,
   }) = _Parameter;
 
   factory Parameter.fromJson(Map<String, dynamic> json) =>

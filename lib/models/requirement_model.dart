@@ -17,7 +17,7 @@ abstract class Requirement with _$Requirement implements EntityMarker {
     required double lowerThreshold,
     required double upperThreshold,
     required String unit,
-    required ParameterType type,
+    required ParameterType parameterType,
   }) = _Requirement;
 
   factory Requirement.fromJson(Map<String, dynamic> json) =>

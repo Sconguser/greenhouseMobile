@@ -272,10 +272,13 @@ class AddNewGreenhouseButton extends ConsumerWidget {
         builder: (context) {
           return GreenhouseModal(
             appbarTitle: S.of(context).addNewGreenhouseAppbarTitle,
-            onAction: (name, location, ipAddress) async {
+            onAction: (name, location, ipAddress, parameters) async {
               ref.read(greenhouseNotifierProvider.notifier).addNewGreenhouse(
                     Greenhouse(
-                        name: name, location: location, ipAddress: ipAddress),
+                        name: name,
+                        location: location,
+                        ipAddress: ipAddress,
+                        parameters: parameters),
                   );
             },
             actionIcon: Icons.add,
@@ -409,7 +412,7 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                 name: _nameFieldKey.currentState!.value,
                 mutable: _mutableFieldKey.currentState!.value,
                 unit: _unitFieldKey.currentState!.value,
-                type: ParameterType.values.byName(
+                parameterType: ParameterType.values.byName(
                     _parameterTypeFieldKey.currentState!.value.toUpperCase()),
                 min: _minMaxFieldKey.currentState!.value.start,
                 max: _minMaxFieldKey.currentState!.value.end,
@@ -426,9 +429,15 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
 }
 
 class ParameterList extends StatefulWidget {
-  const ParameterList({super.key, required this.parameterList});
+  const ParameterList(
+      {super.key,
+      required this.parameterList,
+      required this.onAdd,
+      required this.onDelete});
 
   final List<Parameter> parameterList;
+  final void Function(Parameter) onAdd;
+  final void Function(Parameter) onDelete;
 
   @override
   State<ParameterList> createState() => _ParameterListState();
@@ -458,30 +467,70 @@ class _ParameterListState extends State<ParameterList> {
           child: ListView.builder(
               physics: NeverScrollableScrollPhysics(),
               shrinkWrap: true,
-              // padding: const EdgeInsets.all(16.0),
-              itemCount: widget.parameterList.length + 1,
-              // Add 1 for the button
+              itemCount: tempParameterList.length + 1,
               itemBuilder: (context, index) {
-                if (index == widget.parameterList.length) {
+                if (index == tempParameterList.length) {
                   return ExpansionTile(
                     title: Text("Add new parameter"),
                     children: [
                       ParameterForm(
                         onSubmit: (parameter) {
+                          widget.onAdd.call(parameter);
                           setState(() {
-                            widget.parameterList.add(parameter);
+                            tempParameterList.add(parameter);
                           });
                         },
                       ),
                     ],
                   );
                 }
-                return Card(
-                  child: Text(widget.parameterList.elementAt(index).getName),
-                );
+                return ParameterCard(
+                    parameter: tempParameterList.elementAt(index),
+                    onDelete: (parameter) {
+                      widget.onDelete.call(parameter);
+                      setState(() {
+                        tempParameterList.remove(parameter);
+                      });
+                    });
               }),
         ),
       ],
+    );
+  }
+}
+
+class ParameterCard extends StatelessWidget {
+  const ParameterCard(
+      {super.key, required this.parameter, required this.onDelete});
+
+  final Parameter parameter;
+  final void Function(Parameter) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Name: ${parameter.getName}"),
+                Text("Is mutable: ${parameter.mutable}"),
+                Text(
+                    "Values from: ${parameter.min.truncateToDouble()} to ${parameter.max.truncateToDouble()} ${parameter.unit}"),
+              ],
+            ),
+            IconButton(
+                onPressed: () {
+                  onDelete.call(parameter);
+                },
+                icon: Icon(Icons.delete))
+          ],
+        ),
+      ),
     );
   }
 }
@@ -492,7 +541,8 @@ class GreenhouseModal extends ConsumerStatefulWidget {
   final String? initialIpAddress;
   final List<Parameter> parameters;
   final String appbarTitle;
-  final void Function(String name, String location, String ipAddress) onAction;
+  final void Function(String name, String location, String ipAddress,
+      List<Parameter> parameters) onAction;
   final IconData actionIcon;
   final String actionLabel;
   final String helpTitle;
@@ -525,6 +575,13 @@ class _AddNewGreenhouseModalState extends ConsumerState<GreenhouseModal> {
       GlobalKey<FormBuilderFieldState>();
   final GlobalKey<FormBuilderFieldState> _ipAddressFieldKey =
       GlobalKey<FormBuilderFieldState>();
+  late List<Parameter> tempParameters;
+
+  @override
+  void initState() {
+    super.initState();
+    tempParameters = widget.parameters.map((p) => p.copyWith()).toList();
+  }
 
   @override
   Widget build(BuildContext mainContext) {
@@ -550,7 +607,8 @@ class _AddNewGreenhouseModalState extends ConsumerState<GreenhouseModal> {
                       widget.onAction(
                           _nameFieldKey.currentState!.value,
                           _locationFieldKey.currentState!.value,
-                          _ipAddressFieldKey.currentState!.value);
+                          _ipAddressFieldKey.currentState!.value,
+                          tempParameters);
                       Navigator.of(mainContext).pop();
                     }
                   },
@@ -658,9 +716,14 @@ class _AddNewGreenhouseModalState extends ConsumerState<GreenhouseModal> {
                             ],
                           ),
                         ),
-                        Expanded(
-                          child:
-                              ParameterList(parameterList: widget.parameters),
+                        ParameterList(
+                          parameterList: tempParameters,
+                          onAdd: (parameter) {
+                            tempParameters.add(parameter);
+                          },
+                          onDelete: (parameter) {
+                            tempParameters.remove(parameter);
+                          },
                         )
                       ],
                     ),

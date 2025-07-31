@@ -360,12 +360,28 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                       labelText: "unit",
                       border: OutlineInputBorder(),
                     ),
-                    validator: FormBuilderValidators.compose([
-                      FormBuilderValidators.required(
-                          errorText: S.of(context).authThisFieldCannotBeEmpty),
-                    ]),
+                    enabled: _parameterTypeFieldKey.currentState!.value ==
+                        ParameterType.VALUE,
                     maxLength: 5,
                     maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  ),
+                  buildSizedBoxBetweenInputs(),
+                  FormBuilderRadioGroup(
+                    key: _parameterTypeFieldKey,
+                    name: "parameterType",
+                    decoration: InputDecoration(
+                      labelText: "Parameter type",
+                      border: OutlineInputBorder(),
+                    ),
+                    initialValue: "Value",
+                    options: [
+                      FormBuilderFieldOption(
+                        value: "Value",
+                      ),
+                      FormBuilderFieldOption(
+                        value: "Toggle",
+                      ),
+                    ],
                   ),
                   buildSizedBoxBetweenInputs(),
                   FormBuilderCheckbox(
@@ -378,24 +394,6 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                     ),
                     initialValue: true,
                     onChanged: (isMutable) {},
-                  ),
-                  buildSizedBoxBetweenInputs(),
-                  FormBuilderRadioGroup(
-                    key: _parameterTypeFieldKey,
-                    name: "parameterType",
-                    decoration: InputDecoration(
-                      labelText: "Parameter type",
-                      border: OutlineInputBorder(),
-                    ),
-                    initialValue: "Toggle",
-                    options: [
-                      FormBuilderFieldOption(
-                        value: "Toggle",
-                      ),
-                      FormBuilderFieldOption(
-                        value: "Value",
-                      )
-                    ],
                   ),
                   buildSizedBoxBetweenInputs(),
                 ],
@@ -1437,24 +1435,57 @@ class _ParametersControlPanelState
         Row(
           children: [
             Expanded(
-              child: FlutterSlider(
-                tooltip:
-                    FlutterSliderTooltip(rightSuffix: Text(parameter.unit)),
-                values: [parameter.requestedValue],
-                max: parameter.max,
-                min: parameter.min,
-                onDragging: (handlerIndex, lowerValue, upperValue) {
-                  setState(() {
-                    parameter = parameter.copyWith(currentValue: lowerValue);
-                  });
-                },
-              ),
+              child: _getControlWidget(parameter),
             ),
-            Text("${parameter.name} ${parameter.unit}"),
+            Text(parameter.unit ?? ""),
           ],
         ),
       ],
     );
+  }
+
+  Widget _getControlWidget(Parameter parameter) {
+    switch (parameter.parameterType) {
+      case ParameterType.TOGGLE:
+        return Checkbox(
+            value: parameter.requestedValue == 1,
+            onChanged: parameter.mutable
+                ? (newVal) {
+                    setState(() {
+                      int index = tempParameters
+                          .indexWhere((p) => p.id == parameter.id);
+                      if (index != -1) {
+                        if (newVal == true) {
+                          tempParameters[index] =
+                              tempParameters[index].copyWith(requestedValue: 1);
+                        } else {
+                          tempParameters[index] =
+                              tempParameters[index].copyWith(requestedValue: 0);
+                        }
+                      }
+                    });
+                  }
+                : null);
+      case ParameterType.VALUE:
+        return FlutterSlider(
+          disabled: !parameter.mutable,
+          tooltip: FlutterSliderTooltip(rightSuffix: Text(parameter.unit)),
+          values: [parameter.requestedValue],
+          max: parameter.max,
+          min: parameter.min,
+          onDragging: (handlerIndex, lowerValue, upperValue) {
+            setState(() {
+              int index = tempParameters.indexWhere((p) =>
+                  p.id ==
+                  parameter.id); // or whatever uniquely identifies Parameter
+              if (index != -1) {
+                tempParameters[index] =
+                    tempParameters[index].copyWith(requestedValue: lowerValue);
+              }
+            });
+          },
+        );
+    }
   }
 }
 //

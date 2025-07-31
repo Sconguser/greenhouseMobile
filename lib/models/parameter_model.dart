@@ -19,7 +19,7 @@ abstract class Parameter with _$Parameter implements EntityMarker {
     required double requestedValue,
     required double min,
     required double max,
-    required String unit,
+    required String? unit,
     required ParameterType parameterType,
   }) = _Parameter;
 

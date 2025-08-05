@@ -360,8 +360,6 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                       labelText: "unit",
                       border: OutlineInputBorder(),
                     ),
-                    enabled: _parameterTypeFieldKey.currentState!.value ==
-                        ParameterType.VALUE,
                     maxLength: 5,
                     maxLengthEnforcement: MaxLengthEnforcement.enforced,
                   ),
@@ -412,8 +410,9 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                 unit: _unitFieldKey.currentState!.value,
                 parameterType: ParameterType.values.byName(
                     _parameterTypeFieldKey.currentState!.value.toUpperCase()),
-                min: _minMaxFieldKey.currentState!.value.start,
-                max: _minMaxFieldKey.currentState!.value.end,
+                min: _minMaxFieldKey.currentState!.value.start
+                    .truncateToDouble(),
+                max: _minMaxFieldKey.currentState!.value.end.truncateToDouble(),
                 currentValue: -1,
                 requestedValue: -1,
               ));
@@ -737,11 +736,12 @@ class _AddNewGreenhouseModalState extends ConsumerState<GreenhouseModal> {
 class FlowerpotModal extends ConsumerStatefulWidget {
   final String? initialName;
   final String appbarTitle;
-  final void Function(String name) onAction;
+  final void Function(String name, List<Parameter> parameters) onAction;
   final IconData actionIcon;
   final String actionLabel;
   final String helpTitle;
   final String helpContent;
+  final List<Parameter> parameters;
 
   const FlowerpotModal({
     super.key,
@@ -752,6 +752,7 @@ class FlowerpotModal extends ConsumerStatefulWidget {
     required this.actionLabel,
     required this.helpTitle,
     required this.helpContent,
+    required this.parameters,
   });
 
   @override
@@ -763,6 +764,13 @@ class _FlowerpotModalState extends ConsumerState<FlowerpotModal> {
 
   final GlobalKey<FormBuilderFieldState> _nameFieldKey =
       GlobalKey<FormBuilderFieldState>();
+  late List<Parameter> tempParameters;
+
+  @override
+  void initState() {
+    super.initState();
+    tempParameters = widget.parameters.map((p) => p.copyWith()).toList();
+  }
 
   @override
   Widget build(BuildContext mainContext) {
@@ -785,7 +793,8 @@ class _FlowerpotModalState extends ConsumerState<FlowerpotModal> {
                     _formKey.currentState?.validate();
                     if (_formKey.currentState != null &&
                         _formKey.currentState!.isValid) {
-                      widget.onAction(_nameFieldKey.currentState!.value);
+                      widget.onAction(
+                          _nameFieldKey.currentState!.value, tempParameters);
                       Navigator.of(mainContext).pop();
                     }
                   },
@@ -845,11 +854,23 @@ class _FlowerpotModalState extends ConsumerState<FlowerpotModal> {
                                 .addNewGreenhouseTextFieldGreenhouseNameLabel,
                             border: OutlineInputBorder(),
                           ),
-                          validator: FormBuilderValidators.compose([
-                            FormBuilderValidators.required(
-                                errorText:
-                                    S.of(context).authThisFieldCannotBeEmpty),
-                          ]),
+                          validator: FormBuilderValidators.compose(
+                            [
+                              FormBuilderValidators.required(
+                                  errorText:
+                                      S.of(context).authThisFieldCannotBeEmpty),
+                            ],
+                          ),
+                        ),
+                        buildSizedBoxBetweenInputs(),
+                        ParameterList(
+                          parameterList: tempParameters,
+                          onAdd: (parameter) {
+                            tempParameters.add(parameter);
+                          },
+                          onDelete: (parameter) {
+                            tempParameters.remove(parameter);
+                          },
                         ),
                       ],
                     ),
@@ -865,11 +886,12 @@ class _FlowerpotModalState extends ConsumerState<FlowerpotModal> {
 class ZoneModal extends ConsumerStatefulWidget {
   final String? initialName;
   final String appbarTitle;
-  final void Function(String name) onAction;
+  final void Function(String name, List<Parameter> parameters) onAction;
   final IconData actionIcon;
   final String actionLabel;
   final String helpTitle;
   final String helpContent;
+  final List<Parameter> parameters;
 
   const ZoneModal({
     super.key,
@@ -880,6 +902,7 @@ class ZoneModal extends ConsumerStatefulWidget {
     required this.actionLabel,
     required this.helpTitle,
     required this.helpContent,
+    required this.parameters,
   });
 
   @override
@@ -891,6 +914,13 @@ class _ZoneModalState extends ConsumerState<ZoneModal> {
 
   final GlobalKey<FormBuilderFieldState> _nameFieldKey =
       GlobalKey<FormBuilderFieldState>();
+  late List<Parameter> tempParameters;
+
+  @override
+  void initState() {
+    super.initState();
+    tempParameters = widget.parameters.map((p) => p.copyWith()).toList();
+  }
 
   @override
   Widget build(BuildContext mainContext) {
@@ -913,7 +943,8 @@ class _ZoneModalState extends ConsumerState<ZoneModal> {
                     _formKey.currentState?.validate();
                     if (_formKey.currentState != null &&
                         _formKey.currentState!.isValid) {
-                      widget.onAction(_nameFieldKey.currentState!.value);
+                      widget.onAction(
+                          _nameFieldKey.currentState!.value, tempParameters);
                       Navigator.of(mainContext).pop();
                     }
                   },
@@ -978,6 +1009,16 @@ class _ZoneModalState extends ConsumerState<ZoneModal> {
                                     S.of(context).authThisFieldCannotBeEmpty),
                           ]),
                         ),
+                        buildSizedBoxBetweenInputs(),
+                        ParameterList(
+                          parameterList: tempParameters,
+                          onAdd: (parameter) {
+                            tempParameters.add(parameter);
+                          },
+                          onDelete: (parameter) {
+                            tempParameters.remove(parameter);
+                          },
+                        )
                       ],
                     ),
                   ),
@@ -1412,11 +1453,18 @@ class _ParametersControlPanelState
             actions: [
               TextButton(
                 child: Text(S.of(context).controlsDialogReject),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
               ),
               TextButton(
                 child: Text(S.of(context).controlsDialogAccept),
-                onPressed: () {},
+                onPressed: () {
+                  ref
+                      .read(greenhouseNotifierProvider.notifier)
+                      .updateParameters(changedParameters);
+                  // Navigator.of(context).pop();
+                },
               ),
             ],
           ),
@@ -1432,6 +1480,8 @@ class _ParametersControlPanelState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(parameter.name),
+        Text("Current value: ${parameter.currentValue}"),
+        Text("Requested value: ${parameter.requestedValue}"),
         Row(
           children: [
             Expanded(
@@ -1455,13 +1505,13 @@ class _ParametersControlPanelState
                       int index = tempParameters
                           .indexWhere((p) => p.id == parameter.id);
                       if (index != -1) {
-                        if (newVal == true) {
-                          tempParameters[index] =
-                              tempParameters[index].copyWith(requestedValue: 1);
-                        } else {
-                          tempParameters[index] =
-                              tempParameters[index].copyWith(requestedValue: 0);
+                        double newValAsDouble = newVal == true ? 1 : 0;
+                        if (changedParameters.contains(tempParameters[index])) {
+                          changedParameters.remove(tempParameters[index]);
                         }
+                        tempParameters[index] = tempParameters[index]
+                            .copyWith(requestedValue: newValAsDouble);
+                        changedParameters.add(tempParameters[index]);
                       }
                     });
                   }
@@ -1469,7 +1519,8 @@ class _ParametersControlPanelState
       case ParameterType.VALUE:
         return FlutterSlider(
           disabled: !parameter.mutable,
-          tooltip: FlutterSliderTooltip(rightSuffix: Text(parameter.unit)),
+          tooltip:
+              FlutterSliderTooltip(rightSuffix: Text(parameter.unit ?? "")),
           values: [parameter.requestedValue],
           max: parameter.max,
           min: parameter.min,
@@ -1479,8 +1530,12 @@ class _ParametersControlPanelState
                   p.id ==
                   parameter.id); // or whatever uniquely identifies Parameter
               if (index != -1) {
+                if (changedParameters.contains(tempParameters[index])) {
+                  changedParameters.remove(tempParameters[index]);
+                }
                 tempParameters[index] =
                     tempParameters[index].copyWith(requestedValue: lowerValue);
+                changedParameters.add(tempParameters[index]);
               }
             });
           },

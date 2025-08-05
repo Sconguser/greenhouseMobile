@@ -24,7 +24,7 @@ class HttpService {
   Future<http.Response> request<T>({
     required HttpMethod method,
     required String endpoint,
-    Map<String, dynamic>? body,
+    Object? body,
     Map<String, dynamic>? queryParams,
     bool requireAuth = true,
   }) async {
@@ -83,7 +83,7 @@ class HttpService {
     required HttpMethod method,
     required Uri uri,
     required Map<String, String> headers,
-    Map<String, dynamic>? body,
+    Object? body,
     Duration timeout = const Duration(seconds: 30),
   }) {
     final bodyJson = body != null ? jsonEncode(body) : null;

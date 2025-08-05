@@ -79,21 +79,18 @@ class ControlsView extends ConsumerWidget {
         builder: (context) {
           return FlowerpotModal(
             appbarTitle: "Add new flowerpot",
-            onAction: (name) async {
+            onAction: (name, parameters) async {
               if (zone.getId != null) {
                 ref
                     .read(greenhouseNotifierProvider.notifier)
-                    .addNewFlowerpotToZone(Flowerpot(name: name), zone.getId!);
+                    .addNewFlowerpotToZone(Flowerpot(name: name, parameters: parameters), zone.getId!);
               }
-              // ref.read(greenhouseNotifierProvider.notifier).addNewGreenhouse(
-              //   Greenhouse(
-              //       name: name, location: location, ipAddress: ipAddress),
-              // );
             },
             actionIcon: Icons.add,
             actionLabel: "Add new flowerpot",
             helpTitle: "Add new flowerpot help title placeholder",
             helpContent: "Add new flowerpot help content placeholder",
+            parameters: [],
           );
         });
   }
@@ -106,17 +103,18 @@ class ControlsView extends ConsumerWidget {
         builder: (context) {
           return ZoneModal(
             appbarTitle: "Add new zone",
-            onAction: (name) async {
+            onAction: (name, parameters) async {
               if (parent.getId != null) {
                 ref
                     .read(greenhouseNotifierProvider.notifier)
-                    .addNewZoneToGreenhouse(Zone(name: name), parent.getId!);
+                    .addNewZoneToGreenhouse(Zone(name: name, parameters: parameters), parent.getId!);
               }
             },
             actionIcon: Icons.add,
             actionLabel: "Add new zone",
             helpTitle: "Add new zone help title placeholder",
             helpContent: "Add new zone help content placeholder",
+            parameters: [],
           );
         });
   }

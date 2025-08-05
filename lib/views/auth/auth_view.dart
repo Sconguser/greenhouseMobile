@@ -8,6 +8,7 @@ import 'package:maker_greenhouse/shared/loading_indicator.dart';
 import 'package:maker_greenhouse/views/error/error_view.dart';
 
 import '../../generated/l10n.dart';
+import '../../providers/routes.dart';
 
 enum AuthMode { signIn, signUp }
 
@@ -284,12 +285,12 @@ class _AuthViewState extends ConsumerState<AuthView> {
     double height = MediaQuery.of(context).size.height;
     return Scaffold(
       ///TODO: to be used in the future
-      // floatingActionButton: TextButton(
-      //   child: Text(S.of(context).bottomNavBarSettings),
-      //   onPressed: () {
-      //     ref.read(goRouterProvider).go(AppRoutes.settingsUnauthorized.path);
-      //   },
-      // ),
+      floatingActionButton: TextButton(
+        child: Text(S.of(context).bottomNavBarSettings),
+        onPressed: () {
+          ref.read(goRouterProvider).go(AppRoutes.settingsUnauthorized.path);
+        },
+      ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

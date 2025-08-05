@@ -1,16 +1,28 @@
+import 'package:maker_greenhouse/providers/preferences_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'http_conf.g.dart';
 
 @riverpod
 class HttpConfig extends _$HttpConfig {
+  late final PreferencesService _preferencesService;
+
   @override
-  HttpConfigModel build() => HttpConfigModel(
-        ///TODO: czytac to z pliku
-        baseUrl: '192.168.1.8:8080',
-        timeout: const Duration(seconds: 5),
-        useHttps: false,
-      );
+  Future<HttpConfigModel> build() async {
+    _preferencesService = ref.read(preferencesServiceProvider);
+    ref.keepAlive();
+    return await _getHttpConfigFromPreferences();
+  }
+
+  Future<HttpConfigModel> _getHttpConfigFromPreferences() async {
+    return await _preferencesService.getHttpConfig();
+  }
+
+  Future<void> changeConfig(HttpConfigModel httpConfig) async {
+    state = const AsyncValue.loading();
+    await _preferencesService.setHttpConfig(httpConfig);
+    state = AsyncValue.data(httpConfig);
+  }
 }
 
 class HttpConfigModel {

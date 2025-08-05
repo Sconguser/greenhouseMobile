@@ -61,7 +61,7 @@ GoRouter goRouter(GoRouterRef ref) {
               name: AppRoutes.settingsUnauthorized.name,
               pageBuilder: (context, state) => MaterialPage(
                 key: state.pageKey,
-                child: const SettingsView(),
+                child: const SettingsView(authNavButton: true,),
               ),
             ),
           ]),
@@ -83,7 +83,7 @@ GoRouter goRouter(GoRouterRef ref) {
               name: AppRoutes.settings.name,
               pageBuilder: (context, state) => MaterialPage(
                 key: state.pageKey,
-                child: const SettingsView(),
+                child: const SettingsView(authNavButton: false,),
               ),
             ),
           ])

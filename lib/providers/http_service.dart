@@ -39,7 +39,7 @@ class HttpService {
           uri: uri,
           headers: headers,
           body: body,
-          timeout: config.timeout);
+          timeout: config.value?.timeout ?? Duration(seconds: 10));
 
       return _handleResponse(response);
     } catch (e) {
@@ -52,8 +52,8 @@ class HttpService {
 
   Uri _buildUri(String endpoint, Map<String, dynamic>? queryParams) {
     final config = _ref.read(httpConfigProvider);
-    final baseUrl = config.baseUrl;
-    if (config.useHttps) {
+    final baseUrl = config.value?.baseUrl ?? "1.1.1.1:8080";
+    if (config.value?.useHttps ?? false) {
       return Uri.https(baseUrl, endpoint, queryParams);
     } else {
       return Uri.http(baseUrl, endpoint, queryParams);

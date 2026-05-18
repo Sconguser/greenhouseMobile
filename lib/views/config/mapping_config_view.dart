@@ -4,6 +4,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 
+import '../../generated/l10n.dart';
 import '../../models/greenhouse_model.dart';
 import '../../models/mapping_config_model.dart';
 import '../../providers/mapping_config_notifier.dart';
@@ -20,7 +21,7 @@ class MappingConfigView extends ConsumerWidget {
     final configAsync =
         ref.watch(mappingConfigNotifierProvider(greenhouse.id!));
     return Scaffold(
-      appBar: AppBar(title: Text('Mappings — ${greenhouse.name}')),
+      appBar: AppBar(title: Text(S.of(context).mappingsTitle(greenhouse.name))),
       body: configAsync.when(
         data: (mappings) => _MappingList(
           greenhouse: greenhouse,
@@ -65,8 +66,7 @@ class _MappingListState extends ConsumerState<_MappingList> {
       children: [
         Expanded(
           child: _mappings.isEmpty
-              ? const Center(
-                  child: Text('No mappings configured yet.'))
+              ? Center(child: Text(S.of(context).noMappingsYet))
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: _mappings.length,
@@ -93,7 +93,7 @@ class _MappingListState extends ConsumerState<_MappingList> {
               child: OutlinedButton.icon(
                 onPressed: () => _openForm(null),
                 icon: const Icon(Icons.add),
-                label: const Text('Add mapping'),
+                label: Text(S.of(context).addMapping),
               ),
             ),
             const SizedBox(width: 12),
@@ -101,7 +101,7 @@ class _MappingListState extends ConsumerState<_MappingList> {
               child: ElevatedButton.icon(
                 onPressed: () => _confirmSave(context),
                 icon: const Icon(Icons.upload_rounded),
-                label: const Text('Save & push'),
+                label: Text(S.of(context).saveAndPush),
               ),
             ),
           ],
@@ -129,22 +129,20 @@ class _MappingListState extends ConsumerState<_MappingList> {
   }
 
   void _confirmSave(BuildContext context) {
+    final s = S.of(context);
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Push mapping config to board'),
-        content: const Text(
-          'Saving the mapping configuration will push changes to the board '
-          'and trigger a restart. This may take up to 30 seconds.',
-        ),
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(s.pushMappingConfigTitle),
+        content: Text(s.pushMappingConfigContent),
         actions: [
           TextButton(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.pop(context)),
+              child: Text(s.cancel),
+              onPressed: () => Navigator.of(dialogCtx).pop()),
           ElevatedButton(
-            child: const Text('Save & push'),
+            child: Text(s.saveAndPush),
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.of(dialogCtx).pop();
               ref
                   .read(mappingConfigNotifierProvider(
                           widget.greenhouse.id!)
@@ -259,15 +257,16 @@ class _MappingFormPageState extends State<_MappingFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     final m = widget.initial;
     return Scaffold(
       appBar: AppBar(
-        title: Text(m == null ? 'Add mapping' : 'Edit mapping'),
+        title: Text(m == null ? s.addMapping : s.editMappingTitle),
         actions: [
           TextButton(
             onPressed: _submit,
-            child: const Text('Save',
-                style: TextStyle(
+            child: Text(s.save,
+                style: const TextStyle(
                     fontWeight: FontWeight.bold, color: Colors.white)),
           ),
         ],
@@ -280,12 +279,12 @@ class _MappingFormPageState extends State<_MappingFormPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── Scope ──────────────────────────────────────────────────────
-              _sectionHeader('Scope'),
+              _sectionHeader(s.scopeLabel),
               FormBuilderDropdown<String>(
                 name: 'scope',
                 initialValue: m?.scope ?? 'greenhouse',
-                decoration: const InputDecoration(
-                    labelText: 'Scope', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                    labelText: s.scopeLabel, border: const OutlineInputBorder()),
                 items: _scopes
                     .map((s) =>
                         DropdownMenuItem(value: s, child: Text(s)))
@@ -297,8 +296,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 FormBuilderTextField(
                   name: 'zoneId',
                   initialValue: m?.zoneId?.toString(),
-                  decoration: const InputDecoration(
-                      labelText: 'Zone ID', border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                      labelText: s.zoneIdLabel,
+                      border: const OutlineInputBorder()),
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: FormBuilderValidators.compose([
@@ -311,9 +311,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 FormBuilderTextField(
                   name: 'flowerpotId',
                   initialValue: m?.flowerpotId?.toString(),
-                  decoration: const InputDecoration(
-                      labelText: 'Flowerpot ID',
-                      border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                      labelText: s.flowerpotIdLabel,
+                      border: const OutlineInputBorder()),
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: FormBuilderValidators.compose([
@@ -326,19 +326,19 @@ class _MappingFormPageState extends State<_MappingFormPage> {
               FormBuilderTextField(
                 name: 'paramName',
                 initialValue: m?.paramName,
-                decoration: const InputDecoration(
-                    labelText: 'Parameter name',
-                    hintText: 'e.g. temperature',
-                    border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                    labelText: s.parameterNameLabel,
+                    hintText: s.paramNameHint,
+                    border: const OutlineInputBorder()),
                 validator: FormBuilderValidators.required(),
               ),
 
               const SizedBox(height: 16),
               // ── Read sensor ────────────────────────────────────────────────
-              _sectionHeader('Read sensor (optional)'),
+              _sectionHeader(s.readSensorSection),
               SwitchListTile(
                 value: _hasRead,
-                title: const Text('Has read sensor'),
+                title: Text(s.hasReadSensor),
                 onChanged: (v) => setState(() {
                   _hasRead = v;
                   if (!v) _hasMux = false;
@@ -349,9 +349,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                   name: 'readDriver',
                   initialValue:
                       m?.readDriver ?? _readDrivers.first,
-                  decoration: const InputDecoration(
-                      labelText: 'Read driver',
-                      border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                      labelText: s.readDriverLabel,
+                      border: const OutlineInputBorder()),
                   items: _readDrivers
                       .map((d) =>
                           DropdownMenuItem(value: d, child: Text(d)))
@@ -361,8 +361,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 FormBuilderTextField(
                   name: 'readPin',
                   initialValue: m?.readPin?.toString(),
-                  decoration: const InputDecoration(
-                      labelText: 'Read pin', border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                      labelText: s.readPinLabel,
+                      border: const OutlineInputBorder()),
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: FormBuilderValidators.compose([
@@ -373,16 +374,16 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 const SizedBox(height: 8),
                 SwitchListTile(
                   value: _hasMux,
-                  title: const Text('Uses multiplexer (muxAnalog)'),
+                  title: Text(s.usesMux),
                   onChanged: (v) => setState(() => _hasMux = v),
                 ),
                 if (_hasMux) ...[
                   FormBuilderTextField(
                     name: 'muxChannel',
                     initialValue: m?.muxChannel?.toString(),
-                    decoration: const InputDecoration(
-                        labelText: 'Mux channel (0–7)',
-                        border: OutlineInputBorder()),
+                    decoration: InputDecoration(
+                        labelText: s.muxChannelLabel,
+                        border: const OutlineInputBorder()),
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     validator: FormBuilderValidators.compose([
@@ -394,9 +395,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                   FormBuilderTextField(
                     name: 'muxSelPins',
                     initialValue: m?.muxSelPins.join(','),
-                    decoration: const InputDecoration(
-                        labelText: 'Selector pins (comma separated, e.g. 14,4,5)',
-                        border: OutlineInputBorder()),
+                    decoration: InputDecoration(
+                        labelText: s.selectorPinsLabel,
+                        border: const OutlineInputBorder()),
                     keyboardType: TextInputType.text,
                   ),
                 ],
@@ -404,11 +405,11 @@ class _MappingFormPageState extends State<_MappingFormPage> {
 
               const SizedBox(height: 16),
               // ── Analog scaling ─────────────────────────────────────────────
-              _sectionHeader('Analog value scaling (optional)'),
+              _sectionHeader(s.analogScalingSection),
               SwitchListTile(
                 value: _hasScaling,
-                title: const Text('Apply analog scaling'),
-                subtitle: const Text('Map raw sensor range to display range'),
+                title: Text(s.applyAnalogScaling),
+                subtitle: Text(s.analogScalingSubtitle),
                 onChanged: (v) => setState(() => _hasScaling = v),
               ),
               if (_hasScaling) ...[
@@ -417,9 +418,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                     child: FormBuilderTextField(
                       name: 'mapInMin',
                       initialValue: m?.mapInMin?.toString(),
-                      decoration: const InputDecoration(
-                          labelText: 'Raw min',
-                          border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                          labelText: s.rawMinLabel,
+                          border: const OutlineInputBorder()),
                       keyboardType: const TextInputType.numberWithOptions(
                           decimal: true, signed: true),
                     ),
@@ -429,9 +430,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                     child: FormBuilderTextField(
                       name: 'mapInMax',
                       initialValue: m?.mapInMax?.toString(),
-                      decoration: const InputDecoration(
-                          labelText: 'Raw max',
-                          border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                          labelText: s.rawMaxLabel,
+                          border: const OutlineInputBorder()),
                       keyboardType: const TextInputType.numberWithOptions(
                           decimal: true, signed: true),
                     ),
@@ -443,9 +444,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                     child: FormBuilderTextField(
                       name: 'mapOutMin',
                       initialValue: m?.mapOutMin?.toString(),
-                      decoration: const InputDecoration(
-                          labelText: 'Display min',
-                          border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                          labelText: s.displayMinLabel,
+                          border: const OutlineInputBorder()),
                       keyboardType: const TextInputType.numberWithOptions(
                           decimal: true, signed: true),
                     ),
@@ -455,9 +456,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                     child: FormBuilderTextField(
                       name: 'mapOutMax',
                       initialValue: m?.mapOutMax?.toString(),
-                      decoration: const InputDecoration(
-                          labelText: 'Display max',
-                          border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                          labelText: s.displayMaxLabel,
+                          border: const OutlineInputBorder()),
                       keyboardType: const TextInputType.numberWithOptions(
                           decimal: true, signed: true),
                     ),
@@ -467,10 +468,10 @@ class _MappingFormPageState extends State<_MappingFormPage> {
 
               const SizedBox(height: 16),
               // ── Write actuator ─────────────────────────────────────────────
-              _sectionHeader('Write actuator (optional)'),
+              _sectionHeader(s.writeActuatorSection),
               SwitchListTile(
                 value: _hasWrite,
-                title: const Text('Has write actuator'),
+                title: Text(s.hasWriteActuator),
                 onChanged: (v) => setState(() => _hasWrite = v),
               ),
               if (_hasWrite) ...[
@@ -478,9 +479,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                   name: 'writeDriver',
                   initialValue:
                       m?.writeDriver ?? _writeDrivers.first,
-                  decoration: const InputDecoration(
-                      labelText: 'Write driver',
-                      border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                      labelText: s.writeDriverLabel,
+                      border: const OutlineInputBorder()),
                   items: _writeDrivers
                       .map((d) =>
                           DropdownMenuItem(value: d, child: Text(d)))
@@ -490,9 +491,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 FormBuilderTextField(
                   name: 'writePin',
                   initialValue: m?.writePin?.toString(),
-                  decoration: const InputDecoration(
-                      labelText: 'Write pin',
-                      border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                      labelText: s.writePinLabel,
+                      border: const OutlineInputBorder()),
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: FormBuilderValidators.compose([
@@ -504,9 +505,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 FormBuilderDropdown<String>(
                   name: 'direction',
                   initialValue: m?.direction ?? _directions.first,
-                  decoration: const InputDecoration(
-                      labelText: 'Direction (increase/decrease)',
-                      border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                      labelText: s.directionLabel,
+                      border: const OutlineInputBorder()),
                   items: _directions
                       .map((d) =>
                           DropdownMenuItem(value: d, child: Text(d)))
@@ -516,9 +517,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 FormBuilderTextField(
                   name: 'hysteresis',
                   initialValue: m?.hysteresis?.toString(),
-                  decoration: const InputDecoration(
-                      labelText: 'Hysteresis (deadband)',
-                      border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                      labelText: s.hysteresisLabel,
+                      border: const OutlineInputBorder()),
                   keyboardType: const TextInputType.numberWithOptions(
                       decimal: true, signed: false),
                 ),
@@ -526,15 +527,15 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 FormBuilderCheckbox(
                   name: 'activeLow',
                   initialValue: m?.activeLow ?? false,
-                  title: const Text('Active low (inverted output)'),
+                  title: Text(s.activeLowLabel),
                 ),
                 const SizedBox(height: 8),
                 FormBuilderDropdown<String>(
                   name: 'outputMode',
                   initialValue: m?.outputMode ?? _outputModes.first,
-                  decoration: const InputDecoration(
-                      labelText: 'Output mode',
-                      border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                      labelText: s.outputModeLabel,
+                      border: const OutlineInputBorder()),
                   items: _outputModes
                       .map((o) =>
                           DropdownMenuItem(value: o, child: Text(o)))
@@ -546,9 +547,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                     child: FormBuilderTextField(
                       name: 'minOnMs',
                       initialValue: m?.minOnMs?.toString(),
-                      decoration: const InputDecoration(
-                          labelText: 'Min ON time (ms)',
-                          border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                          labelText: s.minOnTimeLabel,
+                          border: const OutlineInputBorder()),
                       keyboardType: TextInputType.number,
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly
@@ -560,9 +561,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                     child: FormBuilderTextField(
                       name: 'minOffMs',
                       initialValue: m?.minOffMs?.toString(),
-                      decoration: const InputDecoration(
-                          labelText: 'Min OFF time (ms)',
-                          border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                          labelText: s.minOffTimeLabel,
+                          border: const OutlineInputBorder()),
                       keyboardType: TextInputType.number,
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly
@@ -575,7 +576,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _submit,
-                child: Text(m == null ? 'Add mapping' : 'Save changes'),
+                child: Text(m == null ? s.addMapping : s.saveChanges),
               ),
             ],
           ),

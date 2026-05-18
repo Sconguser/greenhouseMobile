@@ -15,6 +15,7 @@ abstract class Flowerpot with _$Flowerpot implements HasPlants, HasParameters {
   factory Flowerpot({
     int? id,
     required String name,
+    DateTime? createdAt,
     @Default([]) List<Plant> plants,
     @Default([]) List<Parameter> parameters,
   }) = _Flowerpot;

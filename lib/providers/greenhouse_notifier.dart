@@ -152,6 +152,21 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
     }
   }
 
+  Future<void> editZone(String name, int zoneId) async {
+    state = AsyncValue.loading();
+    try {
+      await ref.read(httpServiceProvider).request(
+            method: HttpMethod.patch,
+            endpoint: '/zone/$zoneId',
+            body: {'name': name},
+          );
+      state = AsyncValue.data(await _loadGreenhouses());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
   // ─── Flowerpot CRUD ──────────────────────────────────────────────────────────
 
   Future<void> addNewFlowerpotToZone(Flowerpot flowerpot, int zoneId) async {

@@ -29,7 +29,7 @@ class AuthNotifier extends _$AuthNotifier {
   Future<void> login(String username, String password) async {
     state = const AsyncValue.loading();
     try {
-      ref.read(secureStorageProvider).delete(key: KEYS.jwtToken.name);
+      await ref.read(secureStorageProvider.notifier).delete(KEYS.jwtToken.name);
       Response response = await ref.read(httpServiceProvider).request(
             method: HttpMethod.post,
             endpoint: 'auth/login',
@@ -43,9 +43,9 @@ class AuthNotifier extends _$AuthNotifier {
       if (token == null) {
         throw Exception("Auth returned null token, contact support");
       }
-      ref
-          .read(secureStorageProvider)
-          .write(key: KEYS.jwtToken.name, value: token);
+      await ref
+          .read(secureStorageProvider.notifier)
+          .write(KEYS.jwtToken.name, token);
       state = AsyncValue.data(User.fromJson(jsonDecode(response.body)));
       await _initializeFCM();
     } catch (e) {
@@ -58,13 +58,13 @@ class AuthNotifier extends _$AuthNotifier {
   Future<void> signUp(String username, String password) async {
     state = const AsyncValue.loading();
     try {
-      ref.read(secureStorageProvider).delete(key: KEYS.jwtToken.name);
+      await ref.read(secureStorageProvider.notifier).delete(KEYS.jwtToken.name);
       await ref.read(httpServiceProvider).request(
           method: HttpMethod.post,
           endpoint: '/auth/register',
           body: {"username": username, "password": password},
           requireAuth: false);
-      ref.invalidateSelf();
+      reset();
     } catch (e) {
       ///TODO: exception handling when exception is nothing serious
       debugPrint("Error with signup");
@@ -94,6 +94,10 @@ class AuthNotifier extends _$AuthNotifier {
     }
   }
 
+  void reset() {
+    state = const AsyncValue.data(null);
+  }
+
   Future<void> logout() async {
     await _clearFCM();
     await ref.read(secureStorageProvider.notifier).delete(KEYS.jwtToken.name);
@@ -102,7 +106,11 @@ class AuthNotifier extends _$AuthNotifier {
   }
 
   Future<void> _initializeFCM() async {
-    ref.read(notificationServiceProvider).initialize();
+    try {
+      await ref.read(notificationServiceProvider).initialize();
+    } catch (e) {
+      debugPrint('FCM initialization failed: $e');
+    }
   }
 
   Future<void> _clearFCM() async {

@@ -33,6 +33,10 @@ class NotificationService {
       debugPrint("No user logged in. Skipping FCM initialization.");
       return;
     }
+    if (Firebase.apps.isEmpty) {
+      debugPrint("Firebase not initialized. Skipping FCM initialization.");
+      return;
+    }
     await Permission.notification.isDenied.then((denied) {
       if (denied) {
         Permission.notification.request().then((granted) => {

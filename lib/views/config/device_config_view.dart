@@ -4,6 +4,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 
+import '../../generated/l10n.dart';
 import '../../models/device_config_model.dart';
 import '../../models/greenhouse_model.dart';
 import '../../providers/device_config_notifier.dart';
@@ -21,7 +22,7 @@ class DeviceConfigView extends ConsumerWidget {
         ref.watch(deviceConfigNotifierProvider(greenhouse.id!));
     return Scaffold(
       appBar: AppBar(
-        title: Text('Devices — ${greenhouse.name}'),
+        title: Text(S.of(context).devicesTitle(greenhouse.name)),
       ),
       body: configAsync.when(
         data: (configs) => _DeviceConfigList(
@@ -68,7 +69,7 @@ class _DeviceConfigListState extends ConsumerState<_DeviceConfigList> {
       children: [
         Expanded(
           child: _devices.isEmpty
-              ? const Center(child: Text('No devices configured yet.'))
+              ? Center(child: Text(S.of(context).noDevicesYet))
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: _devices.length,
@@ -94,7 +95,7 @@ class _DeviceConfigListState extends ConsumerState<_DeviceConfigList> {
               child: OutlinedButton.icon(
                 onPressed: _addDevice,
                 icon: const Icon(Icons.add),
-                label: const Text('Add device'),
+                label: Text(S.of(context).addDevice),
               ),
             ),
             const SizedBox(width: 12),
@@ -102,7 +103,7 @@ class _DeviceConfigListState extends ConsumerState<_DeviceConfigList> {
               child: ElevatedButton.icon(
                 onPressed: () => _confirmSave(context),
                 icon: const Icon(Icons.upload_rounded),
-                label: const Text('Save & push'),
+                label: Text(S.of(context).saveAndPush),
               ),
             ),
           ],
@@ -136,22 +137,20 @@ class _DeviceConfigListState extends ConsumerState<_DeviceConfigList> {
   }
 
   void _confirmSave(BuildContext context) {
+    final s = S.of(context);
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Push device config to board'),
-        content: const Text(
-          'Saving device configuration will push the changes to the board '
-          'and trigger a restart. This may take up to 30 seconds.',
-        ),
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(s.pushDeviceConfigTitle),
+        content: Text(s.pushDeviceConfigContent),
         actions: [
           TextButton(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.pop(context)),
+              child: Text(s.cancel),
+              onPressed: () => Navigator.of(dialogCtx).pop()),
           ElevatedButton(
-            child: const Text('Save & push'),
+            child: Text(s.saveAndPush),
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.of(dialogCtx).pop();
               ref
                   .read(deviceConfigNotifierProvider(widget.greenhouse.id!)
                       .notifier)
@@ -220,6 +219,7 @@ class _DeviceFormState extends State<_DeviceForm> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, bottom + 16),
@@ -231,7 +231,7 @@ class _DeviceFormState extends State<_DeviceForm> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                widget.initial == null ? 'Add device' : 'Edit device',
+                widget.initial == null ? s.addDevice : s.editDeviceFormTitle,
                 style: const TextStyle(
                     fontSize: 18, fontWeight: FontWeight.bold),
               ),
@@ -239,16 +239,18 @@ class _DeviceFormState extends State<_DeviceForm> {
               FormBuilderTextField(
                 name: 'name',
                 initialValue: widget.initial?.name,
-                decoration: const InputDecoration(
-                    labelText: 'Device name', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                    labelText: s.deviceNameLabel,
+                    border: const OutlineInputBorder()),
                 validator: FormBuilderValidators.required(),
               ),
               const SizedBox(height: 8),
               FormBuilderDropdown<String>(
                 name: 'driver',
                 initialValue: widget.initial?.driver ?? widget.drivers.first,
-                decoration: const InputDecoration(
-                    labelText: 'Driver', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                    labelText: s.driverLabel,
+                    border: const OutlineInputBorder()),
                 items: widget.drivers
                     .map((d) => DropdownMenuItem(value: d, child: Text(d)))
                     .toList(),
@@ -257,8 +259,9 @@ class _DeviceFormState extends State<_DeviceForm> {
               FormBuilderDropdown<String>(
                 name: 'type',
                 initialValue: widget.initial?.type ?? widget.types.first,
-                decoration: const InputDecoration(
-                    labelText: 'Type', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                    labelText: s.typeLabel,
+                    border: const OutlineInputBorder()),
                 items: widget.types
                     .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                     .toList(),
@@ -267,8 +270,9 @@ class _DeviceFormState extends State<_DeviceForm> {
               FormBuilderTextField(
                 name: 'pin',
                 initialValue: widget.initial?.pin.toString(),
-                decoration: const InputDecoration(
-                    labelText: 'GPIO pin', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                    labelText: s.gpioPinLabel,
+                    border: const OutlineInputBorder()),
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: FormBuilderValidators.compose([
@@ -283,9 +287,9 @@ class _DeviceFormState extends State<_DeviceForm> {
                     child: FormBuilderTextField(
                       name: 'minValue',
                       initialValue: widget.initial?.minValue?.toString(),
-                      decoration: const InputDecoration(
-                          labelText: 'Min value (optional)',
-                          border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                          labelText: s.minValueOptionalLabel,
+                          border: const OutlineInputBorder()),
                       keyboardType: const TextInputType.numberWithOptions(
                           decimal: true, signed: true),
                     ),
@@ -295,9 +299,9 @@ class _DeviceFormState extends State<_DeviceForm> {
                     child: FormBuilderTextField(
                       name: 'maxValue',
                       initialValue: widget.initial?.maxValue?.toString(),
-                      decoration: const InputDecoration(
-                          labelText: 'Max value (optional)',
-                          border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                          labelText: s.maxValueOptionalLabel,
+                          border: const OutlineInputBorder()),
                       keyboardType: const TextInputType.numberWithOptions(
                           decimal: true, signed: true),
                     ),
@@ -308,7 +312,7 @@ class _DeviceFormState extends State<_DeviceForm> {
               ElevatedButton(
                 onPressed: _submit,
                 child: Text(
-                    widget.initial == null ? 'Add device' : 'Save changes'),
+                    widget.initial == null ? s.addDevice : s.saveChanges),
               ),
             ],
           ),

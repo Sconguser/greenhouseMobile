@@ -6,6 +6,7 @@ import 'package:maker_greenhouse/views/settings/settings_view.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../views/error/error_view.dart';
+import '../views/analytics/analytics_view.dart';
 import '../views/greenhouses/controls_view.dart';
 import '../views/splash/splash_view.dart';
 import 'auth_notifier.dart';
@@ -15,6 +16,7 @@ part 'routes.g.dart';
 enum AppRoutes {
   login,
   home,
+  analytics,
   splash,
   settings,
   settingsUnauthorized,
@@ -76,6 +78,14 @@ GoRouter goRouter(GoRouterRef ref) {
               pageBuilder: (context, state) => MaterialPage(
                 key: state.pageKey,
                 child: const ControlsView(),
+              ),
+            ),
+            GoRoute(
+              path: AppRoutes.analytics.path,
+              name: AppRoutes.analytics.name,
+              pageBuilder: (context, state) => MaterialPage(
+                key: state.pageKey,
+                child: const AnalyticsView(),
               ),
             ),
             GoRoute(

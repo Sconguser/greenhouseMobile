@@ -22,6 +22,7 @@ abstract class Greenhouse
     required String ipAddress,
     @Default(Status.NOT_RESPONSIVE) Status status,
     DateTime? lastUpdate,
+    DateTime? lastPushed,
     @Default([]) List<Zone> zones,
     @Default([]) List<Parameter> parameters,
   }) = _Greenhouse;

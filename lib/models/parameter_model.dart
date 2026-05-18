@@ -14,6 +14,8 @@ abstract class Parameter with _$Parameter implements EntityMarker {
   factory Parameter({
     int? id,
     required String name,
+    DateTime? createdAt,
+    DateTime? updatedAt,
     required bool mutable,
     required double currentValue,
     required double requestedValue,

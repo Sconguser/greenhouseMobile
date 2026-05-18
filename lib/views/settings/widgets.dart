@@ -75,8 +75,9 @@ class _ServerConfigState extends ConsumerState<ServerConfig> {
   @override
   Widget build(BuildContext context) {
     final config = ref.watch(httpConfigProvider);
+    final s = S.of(context);
     return ExpansionTile(
-      title: Text("Server config"),
+      title: Text(s.serverConfigTitle),
       children: [FormBuilder(
         key: _formKey,
         child: Padding(
@@ -84,17 +85,17 @@ class _ServerConfigState extends ConsumerState<ServerConfig> {
           child: SingleChildScrollView(
             child: Column(
               children: [
-                SizedBox(height: 5),
+                const SizedBox(height: 5),
                 FormBuilderTextField(
                   key: _serverAddressFieldKey,
                   name: 'serverAddress',
                   decoration: InputDecoration(
-                    labelText: "Server address",
-                    border: OutlineInputBorder(),
+                    labelText: s.serverAddressLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   validator: FormBuilderValidators.compose([
                     FormBuilderValidators.required(
-                        errorText: S.of(context).authThisFieldCannotBeEmpty),
+                        errorText: s.authThisFieldCannotBeEmpty),
                   ]),
                   initialValue: config.value?.baseUrl,
                 ),
@@ -103,14 +104,14 @@ class _ServerConfigState extends ConsumerState<ServerConfig> {
                   key: _timeoutDurationFieldKey,
                   name: 'timeout',
                   decoration: InputDecoration(
-                    labelText: "Timeout duration in seconds",
-                    border: OutlineInputBorder(),
+                    labelText: s.timeoutDurationLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   validator: FormBuilderValidators.compose([
                     FormBuilderValidators.required(
-                        errorText: S.of(context).authThisFieldCannotBeEmpty),
+                        errorText: s.authThisFieldCannotBeEmpty),
                     FormBuilderValidators.notZeroNumber(
-                        errorText: "Needs to be a number bigger than 0"),
+                        errorText: s.timeoutMustBePositive),
                   ]),
                   keyboardType: TextInputType.number,
                   initialValue: "${config.value?.timeout.inSeconds}",
@@ -119,11 +120,11 @@ class _ServerConfigState extends ConsumerState<ServerConfig> {
                 FormBuilderCheckbox(
                   name: "useHttps",
                   key: _useHttpsFieldKey,
-                  title: Text("Use https"),
+                  title: Text(s.useHttpsLabel),
                 ),
                 buildSizedBoxBetweenInputs(),
                 ElevatedButton(
-                  child: Text("Save"),
+                  child: Text(s.save),
                   onPressed: () async {
                     _formKey.currentState?.validate();
                     if (_formKey.currentState != null &&
@@ -137,8 +138,7 @@ class _ServerConfigState extends ConsumerState<ServerConfig> {
                               useHttps: _useHttpsFieldKey.currentState?.value ?? false));
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Server config updated')),
+                            SnackBar(content: Text(s.serverConfigUpdated)),
                           );
                         }
                       }

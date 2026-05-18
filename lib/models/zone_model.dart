@@ -18,6 +18,7 @@ abstract class Zone
   factory Zone({
     int? id,
     required String name,
+    DateTime? createdAt,
     @Default([]) List<Flowerpot> flowerpots,
     @Default([]) List<Parameter> parameters,
   }) = _Zone;

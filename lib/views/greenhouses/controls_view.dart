@@ -62,9 +62,29 @@ class ControlsView extends ConsumerWidget {
     final height = MediaQuery.of(context).size.height;
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
-      itemCount: greenhouses.length + 1,
+      itemCount: greenhouses.isEmpty ? 2 : greenhouses.length + 1,
       itemBuilder: (context, index) {
-        if (index == greenhouses.length) {
+        if (greenhouses.isEmpty && index == 0) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 48.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.home_work_outlined,
+                    size: 64, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(S.of(context).noGreenhousesYet,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(S.of(context).noGreenhousesSubtitle,
+                    style:
+                        const TextStyle(fontSize: 14, color: Colors.grey)),
+              ],
+            ),
+          );
+        }
+        if (index >= greenhouses.length) {
           return AddNewGreenhouseButton(height: height);
         }
         final greenhouse = greenhouses[index];
@@ -85,6 +105,7 @@ class ControlsView extends ConsumerWidget {
           child: EntityTile(
             entity: greenhouse,
             elevation: 0,
+            pendingChanges: _buildPendingChanges(greenhouse, context),
             onAddChild: (parent, ctx, r) => _handleAddChild(parent, ctx, r),
             onEdit: (entity, ctx, r) => _handleEdit(entity, ctx, r),
             onDelete: (entity, ctx, r) => _handleDelete(entity, ctx, r),
@@ -123,11 +144,12 @@ class ControlsView extends ConsumerWidget {
 
   void _showAddZoneSheet(
       BuildContext context, WidgetRef ref, Greenhouse parent) {
+    final s = S.of(context);
     showMaterialModalBottomSheet(
       elevation: modalBottomSheetElevation,
       context: context,
       builder: (_) => ZoneModal(
-        appbarTitle: 'Add new zone',
+        appbarTitle: s.addZoneModalTitle,
         onAction: (name, params) {
           if (parent.getId != null) {
             ref
@@ -137,10 +159,9 @@ class ControlsView extends ConsumerWidget {
           }
         },
         actionIcon: Icons.add,
-        actionLabel: 'Add zone',
-        helpTitle: 'Add zone',
-        helpContent:
-            'Create a climate zone within the greenhouse. You can add parameters like temperature or humidity.',
+        actionLabel: s.addZone,
+        helpTitle: s.addZoneHelpTitle,
+        helpContent: s.addZoneHelpContent,
         parameters: const [],
       ),
     );
@@ -148,11 +169,12 @@ class ControlsView extends ConsumerWidget {
 
   void _showAddFlowerpotSheet(
       BuildContext context, WidgetRef ref, Zone zone) {
+    final s = S.of(context);
     showMaterialModalBottomSheet(
       elevation: modalBottomSheetElevation,
       context: context,
       builder: (_) => FlowerpotModal(
-        appbarTitle: 'Add new flowerpot',
+        appbarTitle: s.addFlowerpotModalTitle,
         onAction: (name, params) {
           if (zone.getId != null) {
             ref
@@ -162,10 +184,9 @@ class ControlsView extends ConsumerWidget {
           }
         },
         actionIcon: Icons.add,
-        actionLabel: 'Add flowerpot',
-        helpTitle: 'Add flowerpot',
-        helpContent:
-            'Create a flowerpot within this zone. You can add parameters like soil moisture.',
+        actionLabel: s.addFlowerpot,
+        helpTitle: s.addFlowerpotHelpTitle,
+        helpContent: s.addFlowerpotHelpContent,
         parameters: const [],
       ),
     );
@@ -176,11 +197,12 @@ class ControlsView extends ConsumerWidget {
   void _handleEdit(
       EntityMarker entity, BuildContext context, WidgetRef ref) {
     if (entity is Greenhouse) {
+      final s = S.of(context);
       showMaterialModalBottomSheet(
         elevation: modalBottomSheetElevation,
         context: context,
         builder: (_) => GreenhouseModal(
-          appbarTitle: 'Edit greenhouse',
+          appbarTitle: s.editGreenhouseModalTitle,
           initialName: entity.name,
           initialLocation: entity.location,
           initialIpAddress: entity.ipAddress,
@@ -196,10 +218,16 @@ class ControlsView extends ConsumerWidget {
                 );
           },
           actionIcon: Icons.save,
-          actionLabel: 'Save',
-          helpTitle: 'Edit greenhouse',
-          helpContent: 'Update the greenhouse name, location, or IP address.',
+          actionLabel: s.save,
+          helpTitle: s.editGreenhouseHelpTitle,
+          helpContent: s.editGreenhouseHelpContent,
         ),
+      );
+    } else if (entity is Zone && entity.id != null) {
+      showMaterialModalBottomSheet(
+        elevation: modalBottomSheetElevation,
+        context: context,
+        builder: (_) => RenameZoneModal(zone: entity),
       );
     } else if (entity is Flowerpot && entity.id != null) {
       showMaterialModalBottomSheet(
@@ -214,22 +242,19 @@ class ControlsView extends ConsumerWidget {
 
   void _handleDelete(
       EntityMarker entity, BuildContext context, WidgetRef ref) {
+    final s = S.of(context);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Delete ${entity.getName}?'),
-        content: Text(
-          'This will permanently delete "${entity.getName}" '
-          'and all its contents. This cannot be undone.',
-        ),
+        title: Text(s.deleteConfirmTitle(entity.getName)),
+        content: Text(s.deleteConfirmContent(entity.getName)),
         actions: [
           TextButton(
-            child: const Text('Cancel'),
+            child: Text(s.cancel),
             onPressed: () => Navigator.of(context).pop(),
           ),
           TextButton(
-            child: const Text('Delete',
-                style: TextStyle(color: Colors.red)),
+            child: Text(s.delete, style: const TextStyle(color: Colors.red)),
             onPressed: () {
               Navigator.of(context).pop();
               _performDelete(entity, ref, context);
@@ -258,21 +283,19 @@ class ControlsView extends ConsumerWidget {
 
   void _handlePush(
       Greenhouse greenhouse, BuildContext context, WidgetRef ref) {
+    final s = S.of(context);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Push model to board'),
-        content: Text(
-          'This will send the current greenhouse model to the board at '
-          '${greenhouse.ipAddress}. The board will update its state.',
-        ),
+        title: Text(s.pushToBoardTitle),
+        content: Text(s.pushToBoardContent(greenhouse.ipAddress)),
         actions: [
           TextButton(
-            child: const Text('Cancel'),
+            child: Text(s.cancel),
             onPressed: () => Navigator.of(context).pop(),
           ),
           TextButton(
-            child: const Text('Push'),
+            child: Text(s.push),
             onPressed: () {
               Navigator.of(context).pop();
               if (greenhouse.id != null) {
@@ -333,5 +356,58 @@ class ControlsView extends ConsumerWidget {
     ref
         .read(greenhouseNotifierProvider.notifier)
         .removePlantFromFlowerpot(parent.getId!, plant.getId!);
+  }
+
+  // ─── Pending changes ─────────────────────────────────────────────────────────
+
+  static List<String> _buildPendingChanges(Greenhouse gh, BuildContext context) {
+    final s = S.of(context);
+    final lastPushed = gh.lastPushed;
+    final changes = <String>[];
+
+    bool isNew(DateTime? createdAt) {
+      if (createdAt == null) return false;
+      if (lastPushed == null) return true;
+      return createdAt.isAfter(lastPushed);
+    }
+
+    bool isValueChanged(Parameter p) {
+      final updatedAt = p.updatedAt;
+      if (updatedAt == null) return false;
+      if (isNew(p.createdAt)) return false;
+      if (lastPushed == null) return true;
+      return updatedAt.isAfter(lastPushed);
+    }
+
+    for (final p in gh.parameters) {
+      if (isNew(p.createdAt)) {
+        changes.add(s.pendingChangesParameterAddedToGreenhouse(p.name));
+      } else if (isValueChanged(p)) {
+        changes.add(s.pendingChangesParameterValueChangedInGreenhouse(p.name));
+      }
+    }
+    for (final z in gh.zones) {
+      if (isNew(z.createdAt)) changes.add(s.pendingChangesZoneAdded(z.name));
+      for (final p in z.parameters) {
+        if (isNew(p.createdAt)) {
+          changes.add(s.pendingChangesParameterAddedToZone(p.name, z.name));
+        } else if (isValueChanged(p)) {
+          changes.add(s.pendingChangesParameterValueChangedInZone(p.name, z.name));
+        }
+      }
+      for (final fp in z.flowerpots) {
+        if (isNew(fp.createdAt)) {
+          changes.add(s.pendingChangesFlowerpotAdded(fp.name));
+        }
+        for (final p in fp.parameters) {
+          if (isNew(p.createdAt)) {
+            changes.add(s.pendingChangesParameterAddedToFlowerpot(p.name, fp.name));
+          } else if (isValueChanged(p)) {
+            changes.add(s.pendingChangesParameterValueChangedInFlowerpot(p.name, fp.name));
+          }
+        }
+      }
+    }
+    return changes;
   }
 }

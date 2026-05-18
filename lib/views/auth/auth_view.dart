@@ -155,7 +155,7 @@ class AuthButton extends ConsumerWidget {
           physics: const ClampingScrollPhysics(),
           child: ErrorScreen(
             error: error,
-            onRetry: () => ref.invalidate(authNotifierProvider),
+            onRetry: () => ref.read(authNotifierProvider.notifier).reset(),
           ),
         ),
       );
@@ -212,12 +212,12 @@ class SignUpForm extends StatelessWidget {
               [
                 FormBuilderValidators.required(
                     errorText: S.of(context).authThisFieldCannotBeEmpty),
-                FormBuilderValidators.max(
+                FormBuilderValidators.maxLength(
                   maxPasswordsLength,
                   errorText:
                       S.of(context).authPasswordTooLong(maxPasswordsLength),
                 ),
-                FormBuilderValidators.min(
+                FormBuilderValidators.minLength(
                   minPasswordLength,
                   errorText:
                       S.of(context).authPasswordTooShort(minPasswordLength),
@@ -234,9 +234,15 @@ class SignUpForm extends StatelessWidget {
               hintText: S.of(context).authPasswordConfirmation,
             ),
 
-            //TODO: to nie dziala, do poprawy
-            validator: FormBuilderValidators.required(
-                errorText: S.of(context).authPasswordsDoNotMatch),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return S.of(context).authThisFieldCannotBeEmpty;
+              }
+              if (value != passwordFieldKey.currentState?.value) {
+                return S.of(context).authPasswordsDoNotMatch;
+              }
+              return null;
+            },
             obscureText: true,
             autovalidateMode: AutovalidateMode.onUserInteraction,
           ),

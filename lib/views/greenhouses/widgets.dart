@@ -19,6 +19,7 @@ import '../../models/greenhouse_status_model.dart';
 import '../../models/has_parametrized_children.dart';
 import '../../models/parameter_model.dart';
 import '../../models/parameter_type.dart';
+import '../../models/requirement_model.dart';
 import '../../models/zone_model.dart';
 import '../../models/plant_model.dart';
 import '../../models/flowerpot_model.dart';
@@ -54,6 +55,7 @@ class EntityTile extends ConsumerWidget {
     super.key,
     required this.entity,
     required this.elevation,
+    this.pendingChanges = const [],
     this.onAddChild,
     this.onEdit,
     this.onDelete,
@@ -67,6 +69,7 @@ class EntityTile extends ConsumerWidget {
 
   final EntityMarker entity;
   final double elevation;
+  final List<String> pendingChanges;
 
   final void Function(EntityMarker parent, BuildContext ctx, WidgetRef ref)?
       onAddChild;
@@ -152,7 +155,7 @@ class EntityTile extends ConsumerWidget {
               child: ElevatedButton.icon(
                 onPressed: () => onAddChild!(entity, context, ref),
                 icon: const Icon(Icons.add, size: 18),
-                label: Text(_addChildLabel()),
+                label: Text(_addChildLabel(context)),
               ),
             ),
         ],
@@ -161,56 +164,68 @@ class EntityTile extends ConsumerWidget {
   }
 
   Widget _buildTrailingMenu(BuildContext context, WidgetRef ref) {
+    final s = S.of(context);
     final items = <PopupMenuEntry<String>>[];
 
     if (entity is Greenhouse) {
       if (onEdit != null) {
-        items.add(const PopupMenuItem(
+        items.add(PopupMenuItem(
           value: 'edit',
           child: ListTile(
-            leading: Icon(Icons.edit),
-            title: Text('Edit'),
+            leading: const Icon(Icons.edit),
+            title: Text(s.edit),
             contentPadding: EdgeInsets.zero,
           ),
         ));
       }
       if (onPushToBoard != null) {
-        items.add(const PopupMenuItem(
+        items.add(PopupMenuItem(
           value: 'push',
           child: ListTile(
-            leading: Icon(Icons.upload_rounded),
-            title: Text('Push to board'),
+            leading: const Icon(Icons.upload_rounded),
+            title: Text(s.menuPushToBoard),
             contentPadding: EdgeInsets.zero,
           ),
         ));
       }
       if (onConfigureDevices != null) {
-        items.add(const PopupMenuItem(
+        items.add(PopupMenuItem(
           value: 'devices',
           child: ListTile(
-            leading: Icon(Icons.settings_input_component),
-            title: Text('Configure devices'),
+            leading: const Icon(Icons.settings_input_component),
+            title: Text(s.menuConfigureDevices),
             contentPadding: EdgeInsets.zero,
           ),
         ));
       }
       if (onConfigureMapping != null) {
-        items.add(const PopupMenuItem(
+        items.add(PopupMenuItem(
           value: 'mapping',
           child: ListTile(
-            leading: Icon(Icons.device_hub),
-            title: Text('Configure mappings'),
+            leading: const Icon(Icons.device_hub),
+            title: Text(s.menuConfigureMappings),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ));
+      }
+    } else if (entity is Zone) {
+      if (onEdit != null) {
+        items.add(PopupMenuItem(
+          value: 'edit',
+          child: ListTile(
+            leading: const Icon(Icons.edit),
+            title: Text(s.rename),
             contentPadding: EdgeInsets.zero,
           ),
         ));
       }
     } else if (entity is Flowerpot) {
       if (onEdit != null) {
-        items.add(const PopupMenuItem(
+        items.add(PopupMenuItem(
           value: 'edit',
           child: ListTile(
-            leading: Icon(Icons.edit),
-            title: Text('Rename'),
+            leading: const Icon(Icons.edit),
+            title: Text(s.rename),
             contentPadding: EdgeInsets.zero,
           ),
         ));
@@ -223,45 +238,93 @@ class EntityTile extends ConsumerWidget {
         value: 'delete',
         child: ListTile(
           leading: const Icon(Icons.delete, color: Colors.red),
-          title: Text('Delete ${entity.getName}',
+          title: Text(s.menuDeleteEntity(entity.getName),
               style: const TextStyle(color: Colors.red)),
           contentPadding: EdgeInsets.zero,
         ),
       ));
     }
 
-    if (items.isEmpty) return const SizedBox.shrink();
+    Widget? menu;
+    if (items.isNotEmpty) {
+      menu = PopupMenuButton<String>(
+        itemBuilder: (_) => items,
+        onSelected: (value) {
+          switch (value) {
+            case 'edit':
+              onEdit?.call(entity, context, ref);
+            case 'delete':
+              onDelete?.call(entity, context, ref);
+            case 'push':
+              if (entity is Greenhouse) {
+                onPushToBoard?.call(entity as Greenhouse, context, ref);
+              }
+            case 'devices':
+              if (entity is Greenhouse) {
+                onConfigureDevices?.call(entity as Greenhouse, context, ref);
+              }
+            case 'mapping':
+              if (entity is Greenhouse) {
+                onConfigureMapping?.call(entity as Greenhouse, context, ref);
+              }
+          }
+        },
+      );
+    }
 
-    return PopupMenuButton<String>(
-      itemBuilder: (_) => items,
-      onSelected: (value) {
-        switch (value) {
-          case 'edit':
-            onEdit?.call(entity, context, ref);
-          case 'delete':
-            onDelete?.call(entity, context, ref);
-          case 'push':
-            if (entity is Greenhouse) {
-              onPushToBoard?.call(entity as Greenhouse, context, ref);
-            }
-          case 'devices':
-            if (entity is Greenhouse) {
-              onConfigureDevices?.call(entity as Greenhouse, context, ref);
-            }
-          case 'mapping':
-            if (entity is Greenhouse) {
-              onConfigureMapping?.call(entity as Greenhouse, context, ref);
-            }
-        }
-      },
+    if (pendingChanges.isEmpty) {
+      return menu ?? const SizedBox.shrink();
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Tooltip(
+          message: S.of(context).pendingChangesIconTooltip,
+          child: GestureDetector(
+            onTap: () => _showPendingChangesDialog(context),
+            child: const Icon(Icons.sync_problem, color: Colors.orange),
+          ),
+        ),
+        if (menu != null) ...[const SizedBox(width: 4), menu],
+      ],
     );
   }
 
-  String _addChildLabel() {
-    if (entity is Greenhouse) return 'Add zone';
-    if (entity is Zone) return 'Add flowerpot';
-    if (entity is HasPlants) return 'Add plant';
-    return 'Add';
+  void _showPendingChangesDialog(BuildContext context) {
+    final s = S.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(s.pendingChangesTitle),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: pendingChanges.length,
+            itemBuilder: (_, i) => ListTile(
+              leading: const Icon(Icons.fiber_new, color: Colors.orange),
+              title: Text(pendingChanges[i]),
+              dense: true,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: Text(s.ok),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _addChildLabel(BuildContext context) {
+    final s = S.of(context);
+    if (entity is Greenhouse) return s.addZone;
+    if (entity is Zone) return s.addFlowerpot;
+    if (entity is HasPlants) return s.addPlant;
+    return s.addNewGreenhouseAppbarButton;
   }
 
   String _formatLastUpdate(DateTime dt) {
@@ -326,16 +389,17 @@ class _ParametersControlPanelState
             Column(
               children: [
                 ..._temp.map((p) => _buildParameterRow(p)),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildConfirmButton(context),
-                    _buildResetButton(context),
-                  ],
-                ),
+                if (_changed.isNotEmpty)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildConfirmButton(context),
+                      _buildResetButton(context),
+                    ],
+                  ),
                 if (widget.onAddParameter != null)
                   ExpansionTile(
-                    title: const Text('Add parameter'),
+                    title: Text(S.of(context).addParameter),
                     children: [
                       ParameterForm(
                         onSubmit: (param) async {
@@ -387,22 +451,21 @@ class _ParametersControlPanelState
   }
 
   void _confirmDeleteParameter(Parameter parameter) {
+    final s = S.of(context);
     showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Delete parameter'),
-        content: Text(
-            'Delete "${parameter.name}"? This cannot be undone.'),
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(s.deleteParameterTitle),
+        content: Text(s.deleteParameterContent(parameter.name)),
         actions: [
           TextButton(
-            child: const Text('Cancel'),
-            onPressed: () => Navigator.of(context).pop(),
+            child: Text(s.cancel),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
           ),
           TextButton(
-            child:
-                const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(s.delete, style: const TextStyle(color: Colors.red)),
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(dialogCtx).pop();
               widget.onDeleteParameter?.call(parameter);
             },
           ),
@@ -428,17 +491,18 @@ class _ParametersControlPanelState
       onPressed: () {
         showDialog(
           context: context,
-          builder: (_) => AlertDialog(
+          builder: (dialogCtx) => AlertDialog(
             title: Text(S.of(context).controlsDialogTitle),
             content: Text(S.of(context).controlsDialogContent),
             actions: [
               TextButton(
                 child: Text(S.of(context).controlsDialogReject),
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => Navigator.of(dialogCtx).pop(),
               ),
               TextButton(
                 child: Text(S.of(context).controlsDialogAccept),
                 onPressed: () {
+                  Navigator.of(dialogCtx).pop();
                   ref
                       .read(greenhouseNotifierProvider.notifier)
                       .updateParameters(_changed);
@@ -508,6 +572,10 @@ class ParameterForm extends ConsumerStatefulWidget {
 
 class _ParameterFormState extends ConsumerState<ParameterForm> {
   final _formKey = GlobalKey<FormBuilderState>();
+  bool _isMutable = true;
+
+  static String _formatBound(double v) =>
+      v == v.truncateToDouble() ? v.toInt().toString() : v.toString();
 
   @override
   Widget build(BuildContext context) {
@@ -526,53 +594,113 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                   const SizedBox(height: 5),
                   FormBuilderTextField(
                     name: 'name',
-                    decoration: const InputDecoration(
-                      labelText: 'Parameter name',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: S.of(context).parameterNameLabel,
+                      border: const OutlineInputBorder(),
                     ),
                     validator: FormBuilderValidators.required(
                         errorText: S.of(context).authThisFieldCannotBeEmpty),
                   ),
                   buildSizedBoxBetweenInputs(),
-                  FormBuilderRangeSlider(
-                    name: 'minMaxRange',
-                    min: -1000,
-                    max: 1000,
-                    initialValue: const RangeValues(-10, 10),
-                    decoration: const InputDecoration(
-                        labelText: 'Value range',
-                        border: OutlineInputBorder()),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FormBuilderTextField(
+                          name: 'min',
+                          initialValue: '0',
+                          decoration: InputDecoration(
+                            labelText: S.of(context).parameterMinLabel,
+                            border: const OutlineInputBorder(),
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true, signed: true),
+                          validator: FormBuilderValidators.numeric(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FormBuilderTextField(
+                          name: 'max',
+                          initialValue: '100',
+                          decoration: InputDecoration(
+                            labelText: S.of(context).parameterMaxLabel,
+                            border: const OutlineInputBorder(),
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true, signed: true),
+                          validator: FormBuilderValidators.numeric(),
+                        ),
+                      ),
+                    ],
                   ),
                   buildSizedBoxBetweenInputs(),
                   FormBuilderTextField(
                     name: 'unit',
-                    decoration: const InputDecoration(
-                      labelText: 'Unit',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: S.of(context).parameterUnitLabel,
+                      border: const OutlineInputBorder(),
                     ),
                     maxLength: 8,
                     maxLengthEnforcement: MaxLengthEnforcement.enforced,
                   ),
                   buildSizedBoxBetweenInputs(),
-                  FormBuilderRadioGroup<String>(
+                  FormBuilderRadioGroup<ParameterType>(
                     name: 'parameterType',
-                    decoration: const InputDecoration(
-                      labelText: 'Parameter type',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: S.of(context).parameterTypeLabel,
+                      border: const OutlineInputBorder(),
                     ),
-                    initialValue: 'VALUE',
+                    initialValue: ParameterType.VALUE,
                     options: const [
-                      FormBuilderFieldOption(value: 'VALUE', child: Text('Value')),
                       FormBuilderFieldOption(
-                          value: 'TOGGLE', child: Text('Toggle')),
+                          value: ParameterType.VALUE, child: Text('Value')),
+                      FormBuilderFieldOption(
+                          value: ParameterType.TOGGLE, child: Text('Toggle')),
                     ],
                   ),
                   buildSizedBoxBetweenInputs(),
                   FormBuilderCheckbox(
                     name: 'mutable',
-                    title: const Text('Is mutable (user can change value)'),
+                    title: Text(S.of(context).parameterMutableLabel),
                     initialValue: true,
+                    onChanged: (val) =>
+                        setState(() => _isMutable = val ?? true),
                   ),
+                  if (_isMutable) ...[
+                    buildSizedBoxBetweenInputs(),
+                    FormBuilderTextField(
+                      name: 'requestedValue',
+                      initialValue: '0',
+                      decoration: InputDecoration(
+                        labelText: S.of(context).parameterRequestedValueLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true, signed: true),
+                      validator: FormBuilderValidators.compose([
+                        FormBuilderValidators.numeric(),
+                        (val) {
+                          final v = double.tryParse(val ?? '');
+                          if (v == null) return null;
+                          final fields = _formKey.currentState?.fields;
+                          final minVal = double.tryParse(
+                              fields?['min']?.value as String? ?? '');
+                          final maxVal = double.tryParse(
+                              fields?['max']?.value as String? ?? '');
+                          final s = S.of(context);
+                          if (minVal != null && v < minVal) {
+                            return s.parameterRequestedValueTooLow(
+                                _formatBound(minVal));
+                          }
+                          if (maxVal != null && v > maxVal) {
+                            return s.parameterRequestedValueTooHigh(
+                                _formatBound(maxVal));
+                          }
+                          return null;
+                        },
+                      ]),
+                    ),
+                  ],
                   buildSizedBoxBetweenInputs(),
                 ],
               ),
@@ -584,22 +712,25 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
             _formKey.currentState?.validate();
             if (_formKey.currentState?.isValid == true) {
               final fields = _formKey.currentState!.fields;
-              final range =
-                  fields['minMaxRange']!.value as RangeValues;
+              final mutable = fields['mutable']!.value as bool? ?? true;
+              final requested = mutable
+                  ? double.tryParse(
+                          fields['requestedValue']?.value as String? ?? '') ??
+                      0
+                  : 0.0;
               widget.onSubmit(Parameter(
                 name: fields['name']!.value as String,
-                mutable: fields['mutable']!.value as bool? ?? true,
+                mutable: mutable,
                 unit: fields['unit']!.value as String?,
-                parameterType: ParameterType.values
-                    .byName((fields['parameterType']!.value as String)),
-                min: range.start.truncateToDouble(),
-                max: range.end.truncateToDouble(),
-                currentValue: -1,
-                requestedValue: -1,
+                parameterType: fields['parameterType']!.value as ParameterType,
+                min: double.tryParse(fields['min']!.value as String) ?? 0,
+                max: double.tryParse(fields['max']!.value as String) ?? 100,
+                currentValue: requested,
+                requestedValue: requested,
               ));
             }
           },
-          child: const Text('Add parameter'),
+          child: Text(S.of(context).addParameter),
         ),
       ],
     );
@@ -638,8 +769,8 @@ class _ParameterListState extends State<ParameterList> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('Parameters:',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(S.of(context).parametersListLabel,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         Flexible(
           child: ListView.builder(
             physics: const NeverScrollableScrollPhysics(),
@@ -648,7 +779,7 @@ class _ParameterListState extends State<ParameterList> {
             itemBuilder: (context, index) {
               if (index == _items.length) {
                 return ExpansionTile(
-                  title: const Text('Add new parameter'),
+                  title: Text(S.of(context).addNewParameter),
                   children: [
                     ParameterForm(
                       onSubmit: (param) {
@@ -866,16 +997,14 @@ class _GreenhouseModalState extends ConsumerState<GreenhouseModal> {
   void _showHelp(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title:
-            Text(widget.helpTitle, style: const TextStyle(fontSize: 25)),
-        content: Text(S.of(context).addNewGreenhouseHelpContent,
-            style: const TextStyle(fontSize: 15)),
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(widget.helpTitle, style: const TextStyle(fontSize: 25)),
+        content: Text(widget.helpContent, style: const TextStyle(fontSize: 15)),
         actions: [
           TextButton(
-            child: Text(widget.helpContent,
+            child: Text(S.of(context).ok,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
           ),
         ],
       ),
@@ -954,13 +1083,13 @@ class _ZoneModalState extends ConsumerState<ZoneModal> {
                 icon: const Icon(Icons.help),
                 onPressed: () => showDialog(
                   context: context,
-                  builder: (_) => AlertDialog(
+                  builder: (dialogCtx) => AlertDialog(
                     title: Text(widget.helpTitle),
                     content: Text(widget.helpContent),
                     actions: [
                       TextButton(
-                          child: const Text('OK'),
-                          onPressed: () => Navigator.pop(context))
+                          child: Text(S.of(context).ok),
+                          onPressed: () => Navigator.of(dialogCtx).pop())
                     ],
                   ),
                 ),
@@ -1078,13 +1207,13 @@ class _FlowerpotModalState extends ConsumerState<FlowerpotModal> {
                 icon: const Icon(Icons.help),
                 onPressed: () => showDialog(
                   context: context,
-                  builder: (_) => AlertDialog(
+                  builder: (dialogCtx) => AlertDialog(
                     title: Text(widget.helpTitle),
                     content: Text(widget.helpContent),
                     actions: [
                       TextButton(
-                          child: const Text('OK'),
-                          onPressed: () => Navigator.pop(context))
+                          child: Text(S.of(context).ok),
+                          onPressed: () => Navigator.of(dialogCtx).pop())
                     ],
                   ),
                 ),
@@ -1158,7 +1287,16 @@ class AddNewGreenhouseButton extends ConsumerWidget {
             ),
           ],
         ),
-        child: const Icon(Icons.add),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.add),
+            const SizedBox(width: 8),
+            const Icon(Icons.home_work_outlined),
+            const SizedBox(width: 8),
+            Text(S.of(context).addNewGreenhouseAppbarTitle),
+          ],
+        ),
       ),
     );
   }
@@ -1214,8 +1352,8 @@ class PlantTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Requirements:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(S.of(context).requirementsLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 ...plant.requirements.map((r) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
                       child: Text(
@@ -1231,19 +1369,19 @@ class PlantTile extends StatelessWidget {
   }
 
   void _confirmRemove(BuildContext context) {
+    final s = S.of(context);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Remove plant'),
-        content: Text('Remove "${plant.name}" from this flowerpot?'),
+        title: Text(s.removePlantTitle),
+        content: Text(s.removePlantContent(plant.name)),
         actions: [
           TextButton(
-            child: const Text('Cancel'),
+            child: Text(s.cancel),
             onPressed: () => Navigator.of(context).pop(),
           ),
           TextButton(
-            child: const Text('Remove',
-                style: TextStyle(color: Colors.orange)),
+            child: Text(s.remove, style: const TextStyle(color: Colors.orange)),
             onPressed: () {
               Navigator.of(context).pop();
               onRemove?.call();
@@ -1256,6 +1394,8 @@ class PlantTile extends StatelessWidget {
 }
 
 // ─── Plant modal (add plant to flowerpot) ─────────────────────────────────────
+
+enum _PlantAction { edit, requirements, delete }
 
 class PlantModal extends StatelessWidget {
   const PlantModal({super.key, required this.entityWithPlants});
@@ -1300,23 +1440,105 @@ class PlantModal extends StatelessWidget {
                       data: (data) => ListView.builder(
                         shrinkWrap: true,
                         itemCount: data.length,
-                        itemBuilder: (_, i) => Card(
-                          child: ListTile(
-                            title: Text(data[i].name),
-                            subtitle: Text(data[i].description),
-                            onTap: () {
-                              if (entityWithPlants.getId != null &&
-                                  data[i].getId != null) {
-                                ref
-                                    .read(greenhouseNotifierProvider.notifier)
-                                    .addNewPlantToFlowerpot(
-                                        data[i].getId!,
-                                        entityWithPlants.getId!);
-                                Navigator.of(mainContext).pop();
-                              }
-                            },
-                          ),
-                        ),
+                        itemBuilder: (_, i) {
+                          final plant = data[i];
+                          return Card(
+                            child: ListTile(
+                              title: Text(plant.name),
+                              subtitle: Text(plant.description),
+                              onTap: () {
+                                if (entityWithPlants.getId != null &&
+                                    plant.getId != null) {
+                                  ref
+                                      .read(greenhouseNotifierProvider.notifier)
+                                      .addNewPlantToFlowerpot(
+                                          plant.getId!,
+                                          entityWithPlants.getId!);
+                                  Navigator.of(mainContext).pop();
+                                }
+                              },
+                              trailing: PopupMenuButton<_PlantAction>(
+                                onSelected: (action) {
+                                  switch (action) {
+                                    case _PlantAction.edit:
+                                      Navigator.of(childContext).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              EditPlantPage(plant: plant),
+                                        ),
+                                      );
+                                    case _PlantAction.requirements:
+                                      Navigator.of(childContext).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              PlantRequirementsPage(
+                                                  plant: plant),
+                                        ),
+                                      );
+                                    case _PlantAction.delete:
+                                      if (plant.id == null) return;
+                                      showDialog(
+                                        context: childContext,
+                                        builder: (dialogCtx) {
+                                          final s = S.of(dialogCtx);
+                                          return AlertDialog(
+                                            title: Text(s.deleteConfirmTitle(plant.name)),
+                                            content: Text(s.deletePlantContent(plant.name)),
+                                            actions: [
+                                              TextButton(
+                                                child: Text(s.cancel),
+                                                onPressed: () =>
+                                                    Navigator.pop(childContext),
+                                              ),
+                                              TextButton(
+                                                child: Text(s.delete,
+                                                    style: const TextStyle(
+                                                        color: Colors.red)),
+                                                onPressed: () {
+                                                  Navigator.pop(childContext);
+                                                  ref
+                                                      .read(
+                                                          plantListNotifierProvider
+                                                              .notifier)
+                                                      .deletePlant(plant.id!);
+                                                },
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                  }
+                                },
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: _PlantAction.edit,
+                                    child: ListTile(
+                                      leading: Icon(Icons.edit),
+                                      title: Text('Edit'),
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: _PlantAction.requirements,
+                                    child: ListTile(
+                                      leading: Icon(Icons.checklist),
+                                      title: Text('Requirements'),
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: _PlantAction.delete,
+                                    child: ListTile(
+                                      leading: Icon(Icons.delete,
+                                          color: Colors.red),
+                                      title: Text('Delete',
+                                          style:
+                                              TextStyle(color: Colors.red)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       error: (e, _) => ErrorScreen(
                         error: e,
@@ -1376,7 +1598,7 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
             icon: const Icon(Icons.help),
             onPressed: () => showDialog(
               context: context,
-              builder: (_) => AlertDialog(
+              builder: (dialogCtx) => AlertDialog(
                 title: Text(S.of(context).addNewPlantHelpTitle,
                     style: const TextStyle(fontSize: 25)),
                 content: Text(S.of(context).addNewPlantHelpContent,
@@ -1386,7 +1608,7 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
                     child: Text(S.of(context).addNewPlantHelpDismiss,
                         style:
                             const TextStyle(fontWeight: FontWeight.bold)),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.of(dialogCtx).pop(),
                   ),
                 ],
               ),
@@ -1440,6 +1662,361 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
   }
 }
 
+// ─── Edit plant page ─────────────────────────────────────────────────────────
+
+class EditPlantPage extends ConsumerStatefulWidget {
+  const EditPlantPage({super.key, required this.plant});
+
+  final Plant plant;
+
+  @override
+  ConsumerState<EditPlantPage> createState() => _EditPlantPageState();
+}
+
+class _EditPlantPageState extends ConsumerState<EditPlantPage> {
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      primary: false,
+      appBar: AppBar(
+        title: Text(S.of(context).editPlantTitle(widget.plant.name),
+            style: const TextStyle(fontSize: 17)),
+        actions: [
+          ElevatedButton.icon(
+            onPressed: () {
+              _formKey.currentState?.validate();
+              if (_formKey.currentState?.isValid == true &&
+                  widget.plant.id != null) {
+                final fields = _formKey.currentState!.fields;
+                ref.read(plantListNotifierProvider.notifier).updatePlant(
+                      Plant(
+                        name: fields['name']!.value as String,
+                        description: fields['description']!.value as String,
+                      ),
+                      widget.plant.id!,
+                    );
+                Navigator.of(context).pop();
+              }
+            },
+            icon: const Icon(Icons.check, size: 20),
+            label: Text(S.of(context).save),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: FormBuilder(
+          key: _formKey,
+          child: Column(
+            children: [
+              FormBuilderTextField(
+                name: 'name',
+                initialValue: widget.plant.name,
+                decoration: const InputDecoration(
+                  labelText: 'Plant name',
+                  border: OutlineInputBorder(),
+                ),
+                validator: FormBuilderValidators.required(),
+              ),
+              buildSizedBoxBetweenInputs(),
+              FormBuilderTextField(
+                name: 'description',
+                initialValue: widget.plant.description,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                validator: FormBuilderValidators.required(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Plant requirements page ──────────────────────────────────────────────────
+
+class PlantRequirementsPage extends ConsumerStatefulWidget {
+  const PlantRequirementsPage({super.key, required this.plant});
+
+  final Plant plant;
+
+  @override
+  ConsumerState<PlantRequirementsPage> createState() =>
+      _PlantRequirementsPageState();
+}
+
+class _PlantRequirementsPageState
+    extends ConsumerState<PlantRequirementsPage> {
+  final _formKey = GlobalKey<FormBuilderState>();
+  bool _addingExpanded = false;
+
+  static const _paramTypes = [ParameterType.VALUE, ParameterType.TOGGLE];
+
+  @override
+  Widget build(BuildContext context) {
+    final plantsAsync = ref.watch(plantListNotifierProvider);
+    final current = plantsAsync.valueOrNull
+            ?.firstWhere((p) => p.id == widget.plant.id,
+                orElse: () => widget.plant) ??
+        widget.plant;
+
+    return Scaffold(
+      primary: false,
+      appBar: AppBar(
+        title: Text(S.of(context).requirementsPageTitle(current.name),
+            style: const TextStyle(fontSize: 16)),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (current.requirements.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(S.of(context).requirementsEmptyState,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey)),
+            )
+          else
+            ...current.requirements.map((req) => Card(
+                  child: ListTile(
+                    title: Text(req.name),
+                    subtitle: Text(
+                      '${req.parameterType.name} · '
+                      '${req.lowerThreshold}–${req.upperThreshold} ${req.unit}',
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: req.id == null
+                          ? null
+                          : () => _confirmDeleteRequirement(context, req),
+                    ),
+                  ),
+                )),
+          const Divider(height: 32),
+          ExpansionTile(
+            title: Text(S.of(context).addRequirement),
+            leading: const Icon(Icons.add),
+            initiallyExpanded: _addingExpanded,
+            onExpansionChanged: (v) => setState(() => _addingExpanded = v),
+            children: [_buildAddForm(context, current)],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteRequirement(BuildContext context, Requirement req) {
+    final s = S.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(s.deleteRequirementTitle(req.name)),
+        actions: [
+          TextButton(
+            child: Text(s.cancel),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+          ),
+          TextButton(
+            child: Text(s.delete, style: const TextStyle(color: Colors.red)),
+            onPressed: () {
+              Navigator.of(dialogCtx).pop();
+              ref
+                  .read(plantListNotifierProvider.notifier)
+                  .deleteRequirement(req.id!);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddForm(BuildContext context, Plant currentPlant) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: FormBuilder(
+        key: _formKey,
+        child: Column(
+          children: [
+            FormBuilderTextField(
+              name: 'name',
+              decoration: InputDecoration(
+                  labelText: S.of(context).requirementNameLabel,
+                  border: const OutlineInputBorder()),
+              validator: FormBuilderValidators.required(),
+            ),
+            buildSizedBoxBetweenInputs(),
+            Row(children: [
+              Expanded(
+                child: FormBuilderTextField(
+                  name: 'lower',
+                  decoration: InputDecoration(
+                      labelText: S.of(context).requirementLowerThreshold,
+                      border: const OutlineInputBorder()),
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true, signed: true),
+                  validator: FormBuilderValidators.compose([
+                    FormBuilderValidators.required(),
+                    FormBuilderValidators.numeric(),
+                  ]),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FormBuilderTextField(
+                  name: 'upper',
+                  decoration: InputDecoration(
+                      labelText: S.of(context).requirementUpperThreshold,
+                      border: const OutlineInputBorder()),
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true, signed: true),
+                  validator: FormBuilderValidators.compose([
+                    FormBuilderValidators.required(),
+                    FormBuilderValidators.numeric(),
+                  ]),
+                ),
+              ),
+            ]),
+            buildSizedBoxBetweenInputs(),
+            Row(children: [
+              Expanded(
+                child: FormBuilderTextField(
+                  name: 'unit',
+                  decoration: InputDecoration(
+                      labelText: S.of(context).requirementUnitLabel,
+                      border: const OutlineInputBorder()),
+                  validator: FormBuilderValidators.required(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FormBuilderDropdown<ParameterType>(
+                  name: 'paramType',
+                  initialValue: ParameterType.VALUE,
+                  decoration: InputDecoration(
+                      labelText: S.of(context).requirementTypeLabel,
+                      border: const OutlineInputBorder()),
+                  items: _paramTypes
+                      .map((t) =>
+                          DropdownMenuItem(value: t, child: Text(t.name)))
+                      .toList(),
+                ),
+              ),
+            ]),
+            buildSizedBoxBetweenInputs(),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.add),
+              label: Text(S.of(context).addRequirement),
+              onPressed: () {
+                _formKey.currentState?.validate();
+                if (_formKey.currentState?.isValid == true &&
+                    currentPlant.id != null) {
+                  final f = _formKey.currentState!.fields;
+                  ref
+                      .read(plantListNotifierProvider.notifier)
+                      .addRequirement(
+                        Requirement(
+                          name: f['name']!.value as String,
+                          lowerThreshold: double.parse(
+                              f['lower']!.value as String),
+                          upperThreshold: double.parse(
+                              f['upper']!.value as String),
+                          unit: f['unit']!.value as String,
+                          parameterType:
+                              f['paramType']!.value as ParameterType,
+                        ),
+                        currentPlant.id!,
+                      );
+                  _formKey.currentState?.reset();
+                  setState(() => _addingExpanded = false);
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Rename zone modal ────────────────────────────────────────────────────────
+
+class RenameZoneModal extends ConsumerStatefulWidget {
+  const RenameZoneModal({
+    super.key,
+    required this.zone,
+  });
+
+  final Zone zone;
+
+  @override
+  ConsumerState<RenameZoneModal> createState() => _RenameZoneModalState();
+}
+
+class _RenameZoneModalState extends ConsumerState<RenameZoneModal> {
+  final _formKey = GlobalKey<FormBuilderState>();
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final height = MediaQuery.of(context).size.height;
+    return Container(
+      constraints: BoxConstraints(maxHeight: height * 0.3),
+      child: Material(
+        child: Scaffold(
+          primary: false,
+          appBar: AppBar(
+            title: Text(S.of(context).renameZoneTitle,
+                style: const TextStyle(fontSize: 17)),
+            automaticallyImplyLeading: false,
+            actions: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  _formKey.currentState?.validate();
+                  if (_formKey.currentState?.isValid == true) {
+                    final name = _formKey
+                        .currentState!.fields['name']!.value as String;
+                    ref
+                        .read(greenhouseNotifierProvider.notifier)
+                        .editZone(name, widget.zone.id!);
+                    Navigator.of(context).pop();
+                  }
+                },
+                icon: const Icon(Icons.check, size: 20),
+                label: Text(S.of(context).save),
+              ),
+            ],
+          ),
+          body: Align(
+            alignment: Alignment.topCenter,
+            child: Container(
+              constraints: BoxConstraints(maxWidth: width * 0.9),
+              padding: const EdgeInsets.only(top: 10),
+              child: FormBuilder(
+                key: _formKey,
+                child: FormBuilderTextField(
+                  name: 'name',
+                  initialValue: widget.zone.name,
+                  decoration: InputDecoration(
+                    labelText: S.of(context).zoneNameLabel,
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: FormBuilderValidators.required(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Rename flowerpot modal ───────────────────────────────────────────────────
 
 class RenameFlowerpotModal extends ConsumerStatefulWidget {
@@ -1469,8 +2046,8 @@ class _RenameFlowerpotModalState
         child: Scaffold(
           primary: false,
           appBar: AppBar(
-            title: const Text('Rename flowerpot',
-                style: TextStyle(fontSize: 17)),
+            title: Text(S.of(context).renameFlowerpotTitle,
+                style: const TextStyle(fontSize: 17)),
             automaticallyImplyLeading: false,
             actions: [
               ElevatedButton.icon(
@@ -1486,7 +2063,7 @@ class _RenameFlowerpotModalState
                   }
                 },
                 icon: const Icon(Icons.check, size: 20),
-                label: const Text('Save'),
+                label: Text(S.of(context).save),
               ),
             ],
           ),
@@ -1500,9 +2077,9 @@ class _RenameFlowerpotModalState
                 child: FormBuilderTextField(
                   name: 'name',
                   initialValue: widget.flowerpot.name,
-                  decoration: const InputDecoration(
-                    labelText: 'Flowerpot name',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: S.of(context).flowerpotNameLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   validator: FormBuilderValidators.required(),
                 ),

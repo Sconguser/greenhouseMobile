@@ -68,6 +68,8 @@
     "pendingChangesParameterValueChangedInGreenhouse":"Wartość parametru \"{name}\" zmieniona w szklarni",
     "pendingChangesParameterValueChangedInZone":"Wartość parametru \"{name}\" zmieniona w strefie \"{zone}\"",
     "pendingChangesParameterValueChangedInFlowerpot":"Wartość parametru \"{name}\" zmieniona w doniczce \"{flowerpot}\"",
+    "pendingChangesParameterDeleted":"Parametr został usunięty od ostatniego wypchnięcia",
+    "pendingChangesPushButton":"Wypchnij zmiany na płytkę",
 
     "addZone":"Dodaj strefę",
     "addZoneModalTitle":"Dodaj nową strefę",

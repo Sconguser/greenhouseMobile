@@ -379,6 +379,11 @@ class ControlsView extends ConsumerWidget {
       return updatedAt.isAfter(lastPushed);
     }
 
+    if (gh.modelDirtyAt != null &&
+        (lastPushed == null || gh.modelDirtyAt!.isAfter(lastPushed))) {
+      changes.add(s.pendingChangesParameterDeleted);
+    }
+
     for (final p in gh.parameters) {
       if (isNew(p.createdAt)) {
         changes.add(s.pendingChangesParameterAddedToGreenhouse(p.name));

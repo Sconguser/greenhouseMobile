@@ -26,6 +26,7 @@ abstract class Greenhouse
     bool? deviceConfigSynced,
     bool? mappingConfigSynced,
     bool? modelSynced,
+    DateTime? modelDirtyAt,
     @Default([]) List<Zone> zones,
     @Default([]) List<Parameter> parameters,
   }) = _Greenhouse;

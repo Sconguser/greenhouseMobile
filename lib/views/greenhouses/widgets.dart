@@ -107,7 +107,18 @@ class EntityTile extends ConsumerWidget {
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         subtitle: isGreenhouse
-            ? _GreenhouseSubtitle(greenhouse: greenhouse!)
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _GreenhouseSubtitle(greenhouse: greenhouse!),
+                  if (pendingChanges.isNotEmpty && onPushToBoard != null)
+                    _PendingPushBanner(
+                      onPressed: () =>
+                          onPushToBoard!(greenhouse!, context, ref),
+                    ),
+                ],
+              )
             : null,
         trailing: _buildTrailingMenu(context, ref),
         children: [
@@ -355,16 +366,22 @@ class _ParametersControlPanelState
   @override
   void initState() {
     super.initState();
-    _temp = widget.parameters.map((p) => p.copyWith()).toList();
+    _temp = _sorted(widget.parameters);
   }
 
   @override
   void didUpdateWidget(ParametersControlPanel old) {
     super.didUpdateWidget(old);
     if (old.parameters != widget.parameters) {
-      _temp = widget.parameters.map((p) => p.copyWith()).toList();
+      _temp = _sorted(widget.parameters);
       _changed.clear();
     }
+  }
+
+  static List<Parameter> _sorted(List<Parameter> params) {
+    final list = params.map((p) => p.copyWith()).toList();
+    list.sort((a, b) => (a.id ?? 0).compareTo(b.id ?? 0));
+    return list;
   }
 
   @override
@@ -429,7 +446,7 @@ class _ParametersControlPanelState
         ),
         Text('Current: ${parameter.currentValue} ${parameter.unit ?? ''}',
             style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        Text('Requested: ${parameter.requestedValue}',
+        Text('Requested: ${parameter.requestedValue} ${parameter.unit ?? ''}',
             style: const TextStyle(fontSize: 12, color: Colors.grey)),
         Row(
           children: [
@@ -2125,6 +2142,32 @@ class _GreenhouseSubtitle extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+// ─── Pending push banner ─────────────────────────────────────────────────────
+
+class _PendingPushBanner extends StatelessWidget {
+  const _PendingPushBanner({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 2),
+      child: OutlinedButton.icon(
+        icon: const Icon(Icons.sync, size: 16),
+        label: Text(S.of(context).pendingChangesPushButton),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.orange,
+          side: const BorderSide(color: Colors.orange),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          visualDensity: VisualDensity.compact,
+        ),
+        onPressed: onPressed,
+      ),
     );
   }
 }

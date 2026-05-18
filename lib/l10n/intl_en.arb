@@ -68,6 +68,8 @@
     "pendingChangesParameterValueChangedInGreenhouse":"Parameter \"{name}\" value changed in greenhouse",
     "pendingChangesParameterValueChangedInZone":"Parameter \"{name}\" value changed in zone \"{zone}\"",
     "pendingChangesParameterValueChangedInFlowerpot":"Parameter \"{name}\" value changed in flowerpot \"{flowerpot}\"",
+    "pendingChangesParameterDeleted":"A parameter was deleted since last push",
+    "pendingChangesPushButton":"Push changes to board",
 
     "addZone":"Add zone",
     "addZoneModalTitle":"Add new zone",

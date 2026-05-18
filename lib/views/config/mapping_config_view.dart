@@ -67,6 +67,7 @@ class _MappingList extends ConsumerStatefulWidget {
 
 class _MappingListState extends ConsumerState<_MappingList> {
   late List<MappingConfig> _mappings;
+  bool _isDirty = false;
 
   @override
   void initState() {
@@ -94,10 +95,14 @@ class _MappingListState extends ConsumerState<_MappingList> {
                     greenhouse: widget.greenhouse,
                     devices: devices,
                     onEdit: () => _openForm(i, devices),
-                    onDelete: () => setState(() => _mappings.removeAt(i)),
+                    onDelete: () => setState(() {
+                      _mappings.removeAt(i);
+                      _isDirty = true;
+                    }),
                   ),
                 ),
         ),
+        if (_isDirty) _UnsavedBanner(message: S.of(context).unsavedChangesHint),
         _buildBottomBar(context, devices),
       ],
     );
@@ -122,6 +127,12 @@ class _MappingListState extends ConsumerState<_MappingList> {
                 onPressed: () => _confirmSave(context),
                 icon: const Icon(Icons.upload_rounded),
                 label: Text(S.of(context).saveAndPush),
+                style: _isDirty
+                    ? ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                      )
+                    : null,
               ),
             ),
           ],
@@ -143,6 +154,7 @@ class _MappingListState extends ConsumerState<_MappingList> {
             } else {
               _mappings.add(mapping);
             }
+            _isDirty = true;
           });
         },
       ),
@@ -168,7 +180,33 @@ class _MappingListState extends ConsumerState<_MappingList> {
                   .read(mappingConfigNotifierProvider(widget.greenhouse.id!)
                       .notifier)
                   .saveMappingConfig(_mappings);
+              setState(() => _isDirty = false);
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Unsaved banner ───────────────────────────────────────────────────────────
+
+class _UnsavedBanner extends StatelessWidget {
+  const _UnsavedBanner({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.orange.shade50,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(message,
+                style: const TextStyle(fontSize: 13, color: Colors.orange)),
           ),
         ],
       ),

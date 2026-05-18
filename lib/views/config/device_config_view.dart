@@ -53,6 +53,7 @@ class _DeviceConfigList extends ConsumerStatefulWidget {
 
 class _DeviceConfigListState extends ConsumerState<_DeviceConfigList> {
   late List<DeviceConfig> _devices;
+  bool _isDirty = false;
 
   static const _drivers = ['digital', 'dht22', 'muxAnalog'];
   static const _types = ['value', 'toggle'];
@@ -76,10 +77,14 @@ class _DeviceConfigListState extends ConsumerState<_DeviceConfigList> {
                   itemBuilder: (_, i) => _DeviceCard(
                     device: _devices[i],
                     onEdit: () => _editDevice(i),
-                    onDelete: () => setState(() => _devices.removeAt(i)),
+                    onDelete: () => setState(() {
+                      _devices.removeAt(i);
+                      _isDirty = true;
+                    }),
                   ),
                 ),
         ),
+        if (_isDirty) _UnsavedBanner(message: S.of(context).unsavedChangesHint),
         _buildBottomBar(context),
       ],
     );
@@ -104,6 +109,12 @@ class _DeviceConfigListState extends ConsumerState<_DeviceConfigList> {
                 onPressed: () => _confirmSave(context),
                 icon: const Icon(Icons.upload_rounded),
                 label: Text(S.of(context).saveAndPush),
+                style: _isDirty
+                    ? ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                      )
+                    : null,
               ),
             ),
           ],
@@ -128,6 +139,7 @@ class _DeviceConfigListState extends ConsumerState<_DeviceConfigList> {
             } else {
               _devices.add(device);
             }
+            _isDirty = true;
           });
         },
         drivers: _drivers,
@@ -155,7 +167,31 @@ class _DeviceConfigListState extends ConsumerState<_DeviceConfigList> {
                   .read(deviceConfigNotifierProvider(widget.greenhouse.id!)
                       .notifier)
                   .saveDeviceConfig(_devices);
+              setState(() => _isDirty = false);
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UnsavedBanner extends StatelessWidget {
+  const _UnsavedBanner({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.orange.shade50,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(message,
+                style: const TextStyle(fontSize: 13, color: Colors.orange)),
           ),
         ],
       ),

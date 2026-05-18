@@ -2197,7 +2197,7 @@ class _GreenhouseSyncStatus extends StatelessWidget {
           const SizedBox(width: 8),
           _SyncChip(label: s.syncLabelMapping,    state: _syncStateOf(greenhouse.mappingConfigSynced)),
           const SizedBox(width: 8),
-          _SyncChip(label: s.syncLabelParameters, state: _syncStateOf(greenhouse.modelSynced)),
+          _SyncChip(label: s.syncLabelModel,      state: _syncStateOf(greenhouse.modelSynced)),
         ],
       ),
     );

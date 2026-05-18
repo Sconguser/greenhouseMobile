@@ -53,7 +53,7 @@
     "drawerLogOut":"Wyloguj się",
     "settingsDarkTheme":"Ciemny motyw",
 
-    "menuPushToBoard":"Wyślij do sterownika",
+    "menuPushToBoard":"Wyślij model do sterownika",
     "menuConfigureDevices":"Konfiguruj urządzenia",
     "menuConfigureMappings":"Konfiguruj mapowania",
     "menuDeleteEntity":"Usuń {name}",
@@ -69,7 +69,7 @@
     "pendingChangesParameterValueChangedInZone":"Wartość parametru \"{name}\" zmieniona w strefie \"{zone}\"",
     "pendingChangesParameterValueChangedInFlowerpot":"Wartość parametru \"{name}\" zmieniona w doniczce \"{flowerpot}\"",
     "pendingChangesParameterDeleted":"Parametr został usunięty od ostatniego wypchnięcia",
-    "pendingChangesPushButton":"Wypchnij zmiany na płytkę",
+    "pendingChangesPushButton":"Wypchnij model na płytkę",
 
     "addZone":"Dodaj strefę",
     "addZoneModalTitle":"Dodaj nową strefę",
@@ -224,9 +224,11 @@
     "addNewGreenhouseTextFieldGreenhouseIpAddressErrorLabel":"Należy podać właściwy adres ip",
     "test":"sprawdzam",
 
+    "unsavedChangesHint":"Niezapisane zmiany — naciśnij Zapisz i wyślij, aby wysłać do sterownika",
+
     "syncLabelConfig":"Konfiguracja",
     "syncLabelMapping":"Mapowania",
-    "syncLabelParameters":"Parametry",
+    "syncLabelModel":"Model",
     "syncStateNotConfigured":"Nie skonfigurowano",
     "syncStatePending":"Oczekuje",
     "syncStateSynced":"Gotowe"

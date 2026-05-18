@@ -16,7 +16,12 @@ part 'greenhouse_notifier.g.dart';
 class GreenhouseNotifier extends _$GreenhouseNotifier {
   @override
   Future<List<Greenhouse>> build() async {
-    return _fetchGreenhouses();
+    final greenhouses = await _fetchGreenhouses();
+    if (greenhouses.any(_hasPendingSync)) {
+      final timer = Timer(const Duration(seconds: 5), () => silentRefresh());
+      ref.onDispose(timer.cancel);
+    }
+    return greenhouses;
   }
 
   static bool _hasPendingSync(Greenhouse gh) =>

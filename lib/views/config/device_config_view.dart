@@ -175,13 +175,16 @@ class _DeviceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final extra = StringBuffer('${device.driver} · pin ${device.pin}');
+    if (device.driver == 'digital') extra.write(' · ${device.type}');
+    if (device.minValue != null) {
+      extra.write(' · ${device.minValue}–${device.maxValue}');
+    }
     return Card(
       child: ListTile(
         leading: const Icon(Icons.settings_input_component),
         title: Text(device.name),
-        subtitle: Text(
-            '${device.driver} · ${device.type} · pin ${device.pin}'
-            '${device.minValue != null ? ' · ${device.minValue}–${device.maxValue}' : ''}'),
+        subtitle: Text(extra.toString()),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -216,6 +219,15 @@ class _DeviceForm extends StatefulWidget {
 
 class _DeviceFormState extends State<_DeviceForm> {
   final _formKey = GlobalKey<FormBuilderState>();
+  late String _selectedDriver;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDriver = widget.initial?.driver ?? widget.drivers.first;
+  }
+
+  bool get _isDigital => _selectedDriver == 'digital';
 
   @override
   Widget build(BuildContext context) {
@@ -232,8 +244,7 @@ class _DeviceFormState extends State<_DeviceForm> {
             children: [
               Text(
                 widget.initial == null ? s.addDevice : s.editDeviceFormTitle,
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               FormBuilderTextField(
@@ -247,26 +258,31 @@ class _DeviceFormState extends State<_DeviceForm> {
               const SizedBox(height: 8),
               FormBuilderDropdown<String>(
                 name: 'driver',
-                initialValue: widget.initial?.driver ?? widget.drivers.first,
+                initialValue: _selectedDriver,
                 decoration: InputDecoration(
                     labelText: s.driverLabel,
                     border: const OutlineInputBorder()),
                 items: widget.drivers
                     .map((d) => DropdownMenuItem(value: d, child: Text(d)))
                     .toList(),
+                onChanged: (v) =>
+                    setState(() => _selectedDriver = v ?? widget.drivers.first),
               ),
               const SizedBox(height: 8),
-              FormBuilderDropdown<String>(
-                name: 'type',
-                initialValue: widget.initial?.type ?? widget.types.first,
-                decoration: InputDecoration(
-                    labelText: s.typeLabel,
-                    border: const OutlineInputBorder()),
-                items: widget.types
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                    .toList(),
-              ),
-              const SizedBox(height: 8),
+              // Type only relevant for digital (value vs toggle)
+              if (_isDigital) ...[
+                FormBuilderDropdown<String>(
+                  name: 'type',
+                  initialValue: widget.initial?.type ?? widget.types.first,
+                  decoration: InputDecoration(
+                      labelText: s.typeLabel,
+                      border: const OutlineInputBorder()),
+                  items: widget.types
+                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                      .toList(),
+                ),
+                const SizedBox(height: 8),
+              ],
               FormBuilderTextField(
                 name: 'pin',
                 initialValue: widget.initial?.pin.toString(),
@@ -325,13 +341,16 @@ class _DeviceFormState extends State<_DeviceForm> {
     _formKey.currentState?.validate();
     if (_formKey.currentState?.isValid != true) return;
     final f = _formKey.currentState!.fields;
+
     widget.onSubmit(DeviceConfig(
       name: f['name']!.value as String,
-      driver: f['driver']!.value as String,
-      type: f['type']!.value as String,
+      driver: _selectedDriver,
+      type: _isDigital ? f['type']!.value as String : 'value',
       pin: int.parse(f['pin']!.value as String),
-      minValue: double.tryParse(f['minValue']?.value ?? ''),
-      maxValue: double.tryParse(f['maxValue']?.value ?? ''),
+      minValue: double.tryParse(
+          (f['minValue']?.value as String? ?? '').trim()),
+      maxValue: double.tryParse(
+          (f['maxValue']?.value as String? ?? '').trim()),
     ));
     Navigator.of(context).pop();
   }

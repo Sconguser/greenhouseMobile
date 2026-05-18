@@ -27,6 +27,7 @@ class NavigationNotifier extends _$NavigationNotifier {
   }
 
   void navigate(int index) {
+    state = index;
     final path = switch (index) {
       0 => AppRoutes.home.path,
       1 => AppRoutes.analytics.path,

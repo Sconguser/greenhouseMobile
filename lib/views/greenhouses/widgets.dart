@@ -1,4 +1,4 @@
-import 'package:another_xlider/another_xlider.dart';
+﻿import 'package:another_xlider/another_xlider.dart';
 import 'package:another_xlider/models/tooltip/tooltip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -26,7 +26,7 @@ import '../../models/flowerpot_model.dart';
 import '../../shared/loading_indicator.dart';
 import '../error/error_view.dart';
 
-// ─── Status indicator ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Status indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class GreenhouseStatusIndicator extends StatelessWidget {
   const GreenhouseStatusIndicator({super.key, required this.greenhouseStatus});
@@ -48,7 +48,7 @@ class GreenhouseStatusIndicator extends StatelessWidget {
   }
 }
 
-// ─── Entity tile ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Entity tile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class EntityTile extends ConsumerWidget {
   const EntityTile({
@@ -335,7 +335,7 @@ class EntityTile extends ConsumerWidget {
   }
 }
 
-// ─── Parameters control panel ─────────────────────────────────────────────────
+// â”€â”€â”€ Parameters control panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class ParametersControlPanel extends ConsumerStatefulWidget {
   const ParametersControlPanel({
@@ -559,7 +559,7 @@ class _ParametersControlPanelState
   }
 }
 
-// ─── Parameter form (used in creation modals and add-to-existing) ─────────────
+// â”€â”€â”€ Parameter form (used in creation modals and add-to-existing) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class ParameterForm extends ConsumerStatefulWidget {
   const ParameterForm({super.key, required this.onSubmit});
@@ -737,7 +737,7 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
   }
 }
 
-// ─── Parameter list (used in creation modals) ─────────────────────────────────
+// â”€â”€â”€ Parameter list (used in creation modals) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class ParameterList extends StatefulWidget {
   const ParameterList({
@@ -825,7 +825,7 @@ class ParameterCard extends StatelessWidget {
                 Text('Name: ${parameter.getName}'),
                 Text('Mutable: ${parameter.mutable}'),
                 Text(
-                    'Range: ${parameter.min.truncateToDouble()} — '
+                    'Range: ${parameter.min.truncateToDouble()} â€” '
                     '${parameter.max.truncateToDouble()} ${parameter.unit ?? ''}'),
               ],
             ),
@@ -840,7 +840,7 @@ class ParameterCard extends StatelessWidget {
   }
 }
 
-// ─── Greenhouse modal ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Greenhouse modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class GreenhouseModal extends ConsumerStatefulWidget {
   const GreenhouseModal({
@@ -1013,7 +1013,7 @@ class _GreenhouseModalState extends ConsumerState<GreenhouseModal> {
   }
 }
 
-// ─── Zone modal ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Zone modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class ZoneModal extends ConsumerStatefulWidget {
   const ZoneModal({
@@ -1112,7 +1112,7 @@ class _ZoneModalState extends ConsumerState<ZoneModal> {
                         decoration: InputDecoration(
                           labelText: S
                               .of(context)
-                              .addNewGreenhouseTextFieldGreenhouseNameLabel,
+                              .zoneNameLabel,
                           border: const OutlineInputBorder(),
                         ),
                         validator: FormBuilderValidators.required(
@@ -1137,7 +1137,7 @@ class _ZoneModalState extends ConsumerState<ZoneModal> {
   }
 }
 
-// ─── Flowerpot modal ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Flowerpot modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class FlowerpotModal extends ConsumerStatefulWidget {
   const FlowerpotModal({
@@ -1236,7 +1236,7 @@ class _FlowerpotModalState extends ConsumerState<FlowerpotModal> {
                         decoration: InputDecoration(
                           labelText: S
                               .of(context)
-                              .addNewGreenhouseTextFieldGreenhouseNameLabel,
+                              .flowerpotNameLabel,
                           border: const OutlineInputBorder(),
                         ),
                         validator: FormBuilderValidators.required(
@@ -1261,7 +1261,7 @@ class _FlowerpotModalState extends ConsumerState<FlowerpotModal> {
   }
 }
 
-// ─── Add greenhouse button ────────────────────────────────────────────────────
+// â”€â”€â”€ Add greenhouse button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class AddNewGreenhouseButton extends ConsumerWidget {
   const AddNewGreenhouseButton({super.key, required this.height});
@@ -1323,7 +1323,7 @@ class AddNewGreenhouseButton extends ConsumerWidget {
   }
 }
 
-// ─── Plant tile ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Plant tile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class PlantTile extends StatelessWidget {
   const PlantTile({super.key, required this.plant, this.onRemove});
@@ -1357,7 +1357,7 @@ class PlantTile extends StatelessWidget {
                 ...plant.requirements.map((r) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
                       child: Text(
-                        '${r.name}: ${r.lowerThreshold} – ${r.upperThreshold} ${r.unit}',
+                        '${r.name}: ${r.lowerThreshold} â€“ ${r.upperThreshold} ${r.unit}',
                         style: const TextStyle(fontSize: 13),
                       ),
                     )),
@@ -1393,7 +1393,7 @@ class PlantTile extends StatelessWidget {
   }
 }
 
-// ─── Plant modal (add plant to flowerpot) ─────────────────────────────────────
+// â”€â”€â”€ Plant modal (add plant to flowerpot) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 enum _PlantAction { edit, requirements, delete }
 
@@ -1558,7 +1558,7 @@ class PlantModal extends StatelessWidget {
   }
 }
 
-// ─── Add new plant form ───────────────────────────────────────────────────────
+// â”€â”€â”€ Add new plant form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class AddNewPlantForm extends ConsumerStatefulWidget {
   const AddNewPlantForm({super.key});
@@ -1662,7 +1662,7 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
   }
 }
 
-// ─── Edit plant page ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Edit plant page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class EditPlantPage extends ConsumerStatefulWidget {
   const EditPlantPage({super.key, required this.plant});
@@ -1739,7 +1739,7 @@ class _EditPlantPageState extends ConsumerState<EditPlantPage> {
   }
 }
 
-// ─── Plant requirements page ──────────────────────────────────────────────────
+// â”€â”€â”€ Plant requirements page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class PlantRequirementsPage extends ConsumerStatefulWidget {
   const PlantRequirementsPage({super.key, required this.plant});
@@ -1787,8 +1787,8 @@ class _PlantRequirementsPageState
                   child: ListTile(
                     title: Text(req.name),
                     subtitle: Text(
-                      '${req.parameterType.name} · '
-                      '${req.lowerThreshold}–${req.upperThreshold} ${req.unit}',
+                      '${req.parameterType.name} Â· '
+                      '${req.lowerThreshold}â€“${req.upperThreshold} ${req.unit}',
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
@@ -1944,7 +1944,7 @@ class _PlantRequirementsPageState
   }
 }
 
-// ─── Rename zone modal ────────────────────────────────────────────────────────
+// â”€â”€â”€ Rename zone modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class RenameZoneModal extends ConsumerStatefulWidget {
   const RenameZoneModal({
@@ -2017,7 +2017,7 @@ class _RenameZoneModalState extends ConsumerState<RenameZoneModal> {
   }
 }
 
-// ─── Rename flowerpot modal ───────────────────────────────────────────────────
+// â”€â”€â”€ Rename flowerpot modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class RenameFlowerpotModal extends ConsumerStatefulWidget {
   const RenameFlowerpotModal({
@@ -2092,6 +2092,6 @@ class _RenameFlowerpotModalState
   }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 SizedBox buildSizedBoxBetweenInputs() => const SizedBox(height: 5);

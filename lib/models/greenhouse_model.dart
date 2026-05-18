@@ -23,6 +23,9 @@ abstract class Greenhouse
     @Default(Status.NOT_RESPONSIVE) Status status,
     DateTime? lastUpdate,
     DateTime? lastPushed,
+    @Default(true) bool deviceConfigSynced,
+    @Default(true) bool mappingConfigSynced,
+    @Default(true) bool modelSynced,
     @Default([]) List<Zone> zones,
     @Default([]) List<Parameter> parameters,
   }) = _Greenhouse;

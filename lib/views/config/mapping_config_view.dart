@@ -281,7 +281,6 @@ class _MappingFormPageState extends State<_MappingFormPage> {
   // Read sensor
   bool _hasRead = false;
   String? _selectedReadDeviceName;
-  bool _hasMux = false;
 
   // Analog scaling
   bool _hasScaling = false;
@@ -291,7 +290,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
   String? _selectedWriteDeviceName;
 
   static const _directions = ['increase', 'decrease'];
-  static const _outputModes = ['binary'];
+  static const _outputModes = ['binary', 'pwm'];
 
   @override
   void initState() {
@@ -309,7 +308,6 @@ class _MappingFormPageState extends State<_MappingFormPage> {
       final dev = _firstOrNull(
           widget.devices, (d) => d.driver == m.readDriver && d.pin == m.readPin);
       _selectedReadDeviceName = dev?.name;
-      _hasMux = m.muxChannel != null;
     }
 
     _hasScaling = m.mapInMin != null;
@@ -442,10 +440,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 title: Text(s.hasReadSensor),
                 onChanged: (v) => setState(() {
                   _hasRead = v;
-                  if (!v) {
-                    _selectedReadDeviceName = null;
-                    _hasMux = false;
-                  }
+                  if (!v) _selectedReadDeviceName = null;
                 }),
               ),
               if (_hasRead) ...[
@@ -469,43 +464,36 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                                   Text('${d.name} (${d.driver}, pin ${d.pin})'),
                             ))
                         .toList(),
-                    onChanged: (v) => setState(() {
-                      _selectedReadDeviceName = v;
-                      _hasMux = false;
-                    }),
+                    onChanged: (v) =>
+                        setState(() => _selectedReadDeviceName = v),
                   ),
                   if (_readIsMux) ...[
                     const SizedBox(height: 8),
-                    SwitchListTile(
-                      value: _hasMux,
-                      title: Text(s.usesMux),
-                      onChanged: (v) => setState(() => _hasMux = v),
+                    FormBuilderTextField(
+                      name: 'muxChannel',
+                      initialValue: m?.muxChannel?.toString(),
+                      decoration: InputDecoration(
+                          labelText: s.muxChannelLabel,
+                          border: const OutlineInputBorder()),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly
+                      ],
+                      validator: FormBuilderValidators.compose([
+                        FormBuilderValidators.required(),
+                        FormBuilderValidators.integer(),
+                      ]),
                     ),
-                    if (_hasMux) ...[
-                      FormBuilderTextField(
-                        name: 'muxChannel',
-                        initialValue: m?.muxChannel?.toString(),
-                        decoration: InputDecoration(
-                            labelText: s.muxChannelLabel,
-                            border: const OutlineInputBorder()),
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
-                        ],
-                        validator: FormBuilderValidators.compose([
-                          FormBuilderValidators.required(),
-                          FormBuilderValidators.integer(),
-                        ]),
-                      ),
-                      const SizedBox(height: 8),
-                      FormBuilderTextField(
-                        name: 'muxSelPins',
-                        initialValue: m?.muxSelPins.join(','),
-                        decoration: InputDecoration(
-                            labelText: s.selectorPinsLabel,
-                            border: const OutlineInputBorder()),
-                      ),
-                    ],
+                    const SizedBox(height: 8),
+                    FormBuilderTextField(
+                      name: 'muxSelPins',
+                      initialValue: m?.muxSelPins.isNotEmpty == true
+                          ? m!.muxSelPins.join(',')
+                          : null,
+                      decoration: InputDecoration(
+                          labelText: s.selectorPinsLabel,
+                          border: const OutlineInputBorder()),
+                    ),
                   ],
                 ],
               ],
@@ -780,7 +768,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
             .toList()
         : <int>[];
 
-    final useMux = _hasRead && _readIsMux && _hasMux;
+    final useMux = _hasRead && _readIsMux;
 
     widget.onSubmit(MappingConfig(
       scope: _scope,

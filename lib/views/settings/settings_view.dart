@@ -12,7 +12,7 @@ class SettingsView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final locale = ref.watch(languageNotifierProvider);
+    ref.watch(languageNotifierProvider);
     return SafeArea(
       child: Column(
         children: [

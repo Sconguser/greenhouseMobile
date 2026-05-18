@@ -6,7 +6,7 @@ import 'package:maker_greenhouse/providers/theme_notifier.dart';
 import 'package:maker_greenhouse/shared/ui_constants.dart';
 import 'generated/l10n.dart';
 import 'providers/routes.dart';
-import 'package:firebase_core/firebase_core.dart';
+// import 'package:firebase_core/firebase_core.dart';
 // import 'firebase_options.dart';
 
 void main() async {
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
     return Consumer(builder: (context, ref, _) {
       final themeMode = ref.watch(themeNotifierProvider);
       final router = ref.watch(goRouterProvider);
-      final config = ref.watch(httpConfigProvider);
+      ref.watch(httpConfigProvider);
       return MaterialApp.router(
         localizationsDelegates: const [
           S.delegate,

@@ -3,6 +3,7 @@ import 'package:maker_greenhouse/models/has_parametrized_children.dart';
 import 'package:maker_greenhouse/models/parameter_model.dart';
 import 'package:maker_greenhouse/models/has_parameters.dart';
 import 'package:maker_greenhouse/models/zone_model.dart';
+import 'package:maker_greenhouse/models/greenhouse_status_model.dart';
 
 part 'greenhouse_model.freezed.dart';
 
@@ -19,6 +20,8 @@ abstract class Greenhouse
     required String name,
     required String location,
     required String ipAddress,
+    @Default(Status.NOT_RESPONSIVE) Status status,
+    DateTime? lastUpdate,
     @Default([]) List<Zone> zones,
     @Default([]) List<Parameter> parameters,
   }) = _Greenhouse;

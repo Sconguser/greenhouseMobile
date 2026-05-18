@@ -1,12 +1,10 @@
 import 'dart:convert';
 
-import 'package:http/http.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/flowerpot_model.dart';
 import '../models/greenhouse_model.dart';
 import '../models/parameter_model.dart';
-import '../models/plant_model.dart';
 import '../models/zone_model.dart';
 import 'http_conf.dart';
 import 'http_service.dart';
@@ -23,236 +21,343 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   Future<List<Greenhouse>> _loadGreenhouses() async {
     state = AsyncValue.loading();
     try {
-      Response response = await ref
+      final response = await ref
           .read(httpServiceProvider)
-          .request(method: HttpMethod.get, endpoint: "/greenhouse/");
+          .request(method: HttpMethod.get, endpoint: '/greenhouse/');
       final utf8Body = utf8.decode(response.bodyBytes);
       final List<dynamic> decoded = jsonDecode(utf8Body);
       return decoded
-          .map((decodedGreenhouse) => Greenhouse.fromJson(decodedGreenhouse))
+          .map((e) => Greenhouse.fromJson(e as Map<String, dynamic>))
           .toList();
-    } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
       rethrow;
     }
   }
 
-  Future<Greenhouse> _fetchSingleGreenhouse(int id) async {
+  // ─── Greenhouse CRUD ────────────────────────────────────────────────────────
+
+  Future<void> addNewGreenhouse(Greenhouse greenhouse) async {
     state = AsyncValue.loading();
     try {
-      Response response = await ref
-          .read(httpServiceProvider)
-          .request(method: HttpMethod.get, endpoint: "/greenhouse/$id");
-      final utf8Body = utf8.decode(response.bodyBytes);
-      return Greenhouse.fromJson(jsonDecode(utf8Body));
-    } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
+      final response = await ref.read(httpServiceProvider).request(
+            method: HttpMethod.post,
+            endpoint: '/greenhouse/add',
+            body: greenhouse.toJson(),
+          );
+      if (response.statusCode == 200) {
+        state = AsyncValue.data(await _loadGreenhouses());
+      } else {
+        throw Exception('Failed to add greenhouse');
+      }
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
       rethrow;
     }
   }
-
-  // Future<void> refresh() async {
-  //   state = const AsyncValue.loading();
-  //   state = await AsyncValue.guard(() async {
-  //     return _dummyData(); // Replace with API call
-  //   });
-  // }
 
   Future<void> editGreenhouse(Greenhouse greenhouse, int greenhouseId) async {
-    List<Greenhouse>? previousState;
-    if (state is AsyncData<List<Greenhouse>>) {
-      previousState = (state as AsyncData<List<Greenhouse>>).value;
-    }
+    List<Greenhouse>? previous = _currentList;
     state = AsyncValue.loading();
     try {
-      Response response = await ref.read(httpServiceProvider).request(
-          method: HttpMethod.patch,
-          endpoint: '/greenhouse/$greenhouseId',
-          body: greenhouse.toJson());
+      final response = await ref.read(httpServiceProvider).request(
+            method: HttpMethod.patch,
+            endpoint: '/greenhouse/$greenhouseId',
+            body: greenhouse.toJson(),
+          );
       if (response.statusCode == 200) {
-        if (previousState != null) {
-          final utf8Body = utf8.decode(response.bodyBytes);
-          Greenhouse edited = Greenhouse.fromJson(jsonDecode(utf8Body));
-          previousState
-              .removeWhere((greenhouse) => greenhouse.id == greenhouseId);
-          previousState.add(edited);
-          state = AsyncValue.data(previousState);
+        final utf8Body = utf8.decode(response.bodyBytes);
+        final edited =
+            Greenhouse.fromJson(jsonDecode(utf8Body) as Map<String, dynamic>);
+        if (previous != null) {
+          state = AsyncValue.data([
+            ...previous.where((g) => g.id != greenhouseId),
+            edited,
+          ]);
         } else {
           state = AsyncValue.data(await _loadGreenhouses());
         }
       }
     } catch (e, st) {
-      state = AsyncError(e, st);
+      state = AsyncValue.error(e, st);
       rethrow;
     }
   }
 
-  Future<void> addNewGreenhouse(Greenhouse greenhouse) async {
-    List<Greenhouse>? previousState;
-    if (state is AsyncData<List<Greenhouse>>) {
-      previousState = (state as AsyncData<List<Greenhouse>>).value;
-    }
+  Future<void> deleteGreenhouse(int greenhouseId) async {
     state = AsyncValue.loading();
     try {
-      Response response = await ref.read(httpServiceProvider).request(
+      await ref.read(httpServiceProvider).request(
+            method: HttpMethod.delete,
+            endpoint: '/greenhouse/$greenhouseId',
+          );
+      state = AsyncValue.data(await _loadGreenhouses());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  Future<void> pushModelToGreenhouse(int greenhouseId) async {
+    await ref.read(httpServiceProvider).request(
           method: HttpMethod.post,
-          endpoint: "/greenhouse/add",
-          body: greenhouse.toJson());
-      if (response.statusCode == 200) {
-        state = AsyncValue.data(await _loadGreenhouses());
-      } else {
-        throw Exception('Failed to add plant');
-      }
-    } catch (exception, stackTrace) {
-      state = AsyncError(exception, stackTrace);
-      rethrow;
-    }
+          endpoint: '/greenhouse/$greenhouseId/push',
+        );
   }
 
-  Future<void> updateParameters(List<Parameter> parameters) async{
-    List<Greenhouse>? previousState;
-    if (state is AsyncData<List<Greenhouse>>) {
-      previousState = (state as AsyncData<List<Greenhouse>>).value;
-    }
+  // ─── Zone CRUD ───────────────────────────────────────────────────────────────
+
+  Future<void> addNewZoneToGreenhouse(Zone zone, int greenhouseId) async {
     state = AsyncValue.loading();
     try {
-      Response response = await ref.read(httpServiceProvider).request(
-        method: HttpMethod.patch,
-        endpoint: '/parameter/updateParameters',
-        body: parameters.map((p) => p.toJson()).toList()
-      );
-      if (response.statusCode == 200) {
-        state = AsyncValue.data(await _loadGreenhouses());
-
-        ///TODO: zrobic to znowu z pobieraniem dobrych danych
-        // if (previousState != null) {
-        //   Greenhouse modifiedGreenhouse = await _fetchSingleGreenhouse(id);
-        //   previousState.removeWhere((greenhouse) => greenhouse.id == id);
-        //   state = AsyncValue.data([...previousState, modifiedGreenhouse]);
-        // } else {
-        //   state = AsyncValue.data(await _loadGreenhouses());
-        // }
-      } else {
-        throw Exception('Failed to add plant to greenhouse');
+      final zoneResponse = await ref.read(httpServiceProvider).request(
+            method: HttpMethod.post,
+            endpoint: '/greenhouse/$greenhouseId/addZone',
+            body: {'name': zone.name},
+          );
+      if (zoneResponse.statusCode != 200) {
+        throw Exception('Failed to create zone');
       }
-    } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
+      final newZone = Zone.fromJson(
+          jsonDecode(utf8.decode(zoneResponse.bodyBytes)) as Map<String, dynamic>);
+
+      // Add each parameter separately after the zone is created
+      if (newZone.id != null) {
+        for (final param in zone.parameters) {
+          await ref.read(httpServiceProvider).request(
+                method: HttpMethod.post,
+                endpoint: '/zone/${newZone.id}/addParameter',
+                body: param.toJson(),
+              );
+        }
+      }
+      state = AsyncValue.data(await _loadGreenhouses());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
       rethrow;
     }
   }
+
+  Future<void> deleteZone(int greenhouseId, int zoneId) async {
+    state = AsyncValue.loading();
+    try {
+      await ref.read(httpServiceProvider).request(
+            method: HttpMethod.delete,
+            endpoint: '/greenhouse/$greenhouseId/deleteZone/$zoneId',
+          );
+      state = AsyncValue.data(await _loadGreenhouses());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  // ─── Flowerpot CRUD ──────────────────────────────────────────────────────────
+
+  Future<void> addNewFlowerpotToZone(Flowerpot flowerpot, int zoneId) async {
+    state = AsyncValue.loading();
+    try {
+      final potResponse = await ref.read(httpServiceProvider).request(
+            method: HttpMethod.post,
+            endpoint: '/zone/$zoneId/addFlowerpot',
+            body: {'name': flowerpot.name},
+          );
+      if (potResponse.statusCode != 200) {
+        throw Exception('Failed to create flowerpot');
+      }
+      final newPot = Flowerpot.fromJson(
+          jsonDecode(utf8.decode(potResponse.bodyBytes)) as Map<String, dynamic>);
+
+      // Add each parameter separately after the flowerpot is created
+      if (newPot.id != null) {
+        for (final param in flowerpot.parameters) {
+          await ref.read(httpServiceProvider).request(
+                method: HttpMethod.post,
+                endpoint: '/flowerpot/${newPot.id}/addParameter',
+                body: param.toJson(),
+              );
+        }
+      }
+      state = AsyncValue.data(await _loadGreenhouses());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  Future<void> editFlowerpot(String name, int flowerpotId) async {
+    state = AsyncValue.loading();
+    try {
+      await ref.read(httpServiceProvider).request(
+            method: HttpMethod.patch,
+            endpoint: '/flowerpot/$flowerpotId',
+            body: {'name': name},
+          );
+      state = AsyncValue.data(await _loadGreenhouses());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteFlowerpot(int zoneId, int flowerpotId) async {
+    state = AsyncValue.loading();
+    try {
+      await ref.read(httpServiceProvider).request(
+            method: HttpMethod.delete,
+            endpoint: '/zone/$zoneId/deleteFlowerpot/$flowerpotId',
+          );
+      state = AsyncValue.data(await _loadGreenhouses());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  // ─── Plant ───────────────────────────────────────────────────────────────────
 
   Future<void> addNewPlantToFlowerpot(int plantId, int flowerpotId) async {
-    List<Greenhouse>? previousState;
-    if (state is AsyncData<List<Greenhouse>>) {
-      previousState = (state as AsyncData<List<Greenhouse>>).value;
-    }
     state = AsyncValue.loading();
     try {
-      Response response = await ref.read(httpServiceProvider).request(
+      final response = await ref.read(httpServiceProvider).request(
             method: HttpMethod.put,
             endpoint: '/flowerpot/$flowerpotId/addPlant/$plantId',
           );
       if (response.statusCode == 200) {
         state = AsyncValue.data(await _loadGreenhouses());
-
-        ///TODO: zrobic to znowu z pobieraniem dobrych danych
-        // if (previousState != null) {
-        //   Greenhouse modifiedGreenhouse = await _fetchSingleGreenhouse(id);
-        //   previousState.removeWhere((greenhouse) => greenhouse.id == id);
-        //   state = AsyncValue.data([...previousState, modifiedGreenhouse]);
-        // } else {
-        //   state = AsyncValue.data(await _loadGreenhouses());
-        // }
       } else {
-        throw Exception('Failed to add plant to greenhouse');
+        throw Exception('Failed to add plant to flowerpot');
       }
-    } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
       rethrow;
     }
   }
 
-  Future<void> addNewZoneToGreenhouse(Zone zone, int id) async {
-    List<Greenhouse>? previousState;
-    if (state is AsyncData<List<Greenhouse>>) {
-      previousState = (state as AsyncData<List<Greenhouse>>).value;
-    }
+  Future<void> removePlantFromFlowerpot(int flowerpotId, int plantId) async {
     state = AsyncValue.loading();
     try {
-      Response response = await ref.read(httpServiceProvider).request(
-            method: HttpMethod.post,
-            endpoint: '/greenhouse/$id/addZone',
-            body: zone.toJson(),
+      await ref.read(httpServiceProvider).request(
+            method: HttpMethod.delete,
+            endpoint: '/flowerpot/$flowerpotId/deletePlant/$plantId',
           );
-      if (response.statusCode == 200) {
-        if (previousState != null) {
-          Greenhouse modifiedGreenhouse = await _fetchSingleGreenhouse(id);
-          previousState.removeWhere((greenhouse) => greenhouse.id == id);
-          state = AsyncValue.data([...previousState, modifiedGreenhouse]);
-        } else {
-          state = AsyncValue.data(await _loadGreenhouses());
-        }
-      } else {
-        throw Exception('Failed to add zone to greenhouse');
-      }
-    } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
+      state = AsyncValue.data(await _loadGreenhouses());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
       rethrow;
     }
   }
 
-  Future<void> addNewFlowerpotToZone(Flowerpot flowerpot, int id) async {
-    List<Greenhouse>? previousState;
-    if (state is AsyncData<List<Greenhouse>>) {
-      previousState = (state as AsyncData<List<Greenhouse>>).value;
-    }
+  // ─── Parameters ──────────────────────────────────────────────────────────────
+
+  Future<void> updateParameters(List<Parameter> parameters) async {
     state = AsyncValue.loading();
     try {
-      Response response = await ref.read(httpServiceProvider).request(
-            method: HttpMethod.post,
-            endpoint: '/zone/$id/addFlowerpot',
-            body: flowerpot.toJson(),
+      final response = await ref.read(httpServiceProvider).request(
+            method: HttpMethod.patch,
+            endpoint: '/parameter/updateParameters',
+            body: parameters.map((p) => p.toJson()).toList(),
           );
       if (response.statusCode == 200) {
         state = AsyncValue.data(await _loadGreenhouses());
-
-        ///TODO: zrobic to od nowa z dobrym wyszukiwaniem które dane pobireać
-        // if (previousState != null) {
-        //   Greenhouse modifiedGreenhouse = await _fetchSingleGreenhouse(id);
-        //   previousState.removeWhere((greenhouse) => greenhouse.id == id);
-        //   state = AsyncValue.data([...previousState, modifiedGreenhouse]);
-        // } else {
-        //   state = AsyncValue.data(await _loadGreenhouses());
-        // }
       } else {
-        throw Exception('Failed to add flowerpot to greenhouse');
+        throw Exception('Failed to update parameters');
       }
-    } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
       rethrow;
     }
   }
 
-  List<Greenhouse> _dummyData() {
-    return [
-      Greenhouse(
-        id: 1,
-        name: "Greenhouse1",
-        location: "horn",
-        ipAddress: "1.1.1.1",
-      ),
-      Greenhouse(
-        id: 2,
-        name: "Srenhouse1",
-        location: "horn",
-        ipAddress: "1.1.1.1",
-      ),
-      Greenhouse(
-        id: 3,
-        name: "Srenhouse5",
-        location: "horn",
-        ipAddress: "1.1.1.1",
-      )
-    ];
+  Future<void> addParameterToGreenhouse(
+      Parameter parameter, int greenhouseId) async {
+    state = AsyncValue.loading();
+    try {
+      await ref.read(httpServiceProvider).request(
+            method: HttpMethod.post,
+            endpoint: '/greenhouse/$greenhouseId/addParameter',
+            body: parameter.toJson(),
+          );
+      state = AsyncValue.data(await _loadGreenhouses());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  Future<void> addParameterToZone(Parameter parameter, int zoneId) async {
+    state = AsyncValue.loading();
+    try {
+      await ref.read(httpServiceProvider).request(
+            method: HttpMethod.post,
+            endpoint: '/zone/$zoneId/addParameter',
+            body: parameter.toJson(),
+          );
+      state = AsyncValue.data(await _loadGreenhouses());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  Future<void> addParameterToFlowerpot(
+      Parameter parameter, int flowerpotId) async {
+    state = AsyncValue.loading();
+    try {
+      await ref.read(httpServiceProvider).request(
+            method: HttpMethod.post,
+            endpoint: '/flowerpot/$flowerpotId/addParameter',
+            body: parameter.toJson(),
+          );
+      state = AsyncValue.data(await _loadGreenhouses());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteParameter(int parameterId) async {
+    state = AsyncValue.loading();
+    try {
+      await ref.read(httpServiceProvider).request(
+            method: HttpMethod.delete,
+            endpoint: '/parameter/$parameterId',
+          );
+      state = AsyncValue.data(await _loadGreenhouses());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+  List<Greenhouse>? get _currentList =>
+      state is AsyncData<List<Greenhouse>>
+          ? (state as AsyncData<List<Greenhouse>>).value
+          : null;
+
+  // Finds the zone that contains a given flowerpot by searching the loaded state.
+  int? findZoneIdForFlowerpot(int flowerpotId) {
+    final greenhouses = _currentList;
+    if (greenhouses == null) return null;
+    for (final gh in greenhouses) {
+      for (final zone in gh.zones) {
+        if (zone.flowerpots.any((fp) => fp.id == flowerpotId)) {
+          return zone.id;
+        }
+      }
+    }
+    return null;
+  }
+
+  // Finds the greenhouse that contains a given zone.
+  int? findGreenhouseIdForZone(int zoneId) {
+    final greenhouses = _currentList;
+    if (greenhouses == null) return null;
+    for (final gh in greenhouses) {
+      if (gh.zones.any((z) => z.id == zoneId)) return gh.id;
+    }
+    return null;
   }
 }

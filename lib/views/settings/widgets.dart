@@ -35,7 +35,7 @@ class LanguagePick extends ConsumerWidget {
     List<Language> supportedLanguages = S.delegate.supportedLocales
         .map((locale) => Language.fromIsoCode(locale.languageCode))
         .toList();
-    final language = ref.watch(languageNotifierProvider);
+    ref.watch(languageNotifierProvider);
     return SafeArea(
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 20),
@@ -135,10 +135,12 @@ class _ServerConfigState extends ConsumerState<ServerConfig> {
                                   seconds: int.parse(_timeoutDurationFieldKey
                                       .currentState!.value)),
                               useHttps: _useHttpsFieldKey.currentState?.value ?? false));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Server config updated')),
-                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Server config updated')),
+                          );
+                        }
                       }
                   },
                 ),

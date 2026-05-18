@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maker_greenhouse/models/flowerpot_model.dart';
+import 'package:maker_greenhouse/models/has_plants.dart';
+import 'package:maker_greenhouse/models/plant_model.dart';
+import 'package:maker_greenhouse/models/zone_model.dart';
 import 'package:maker_greenhouse/providers/greenhouse_notifier.dart';
 import 'package:maker_greenhouse/shared/loading_indicator.dart';
+import 'package:maker_greenhouse/views/config/device_config_view.dart';
+import 'package:maker_greenhouse/views/config/mapping_config_view.dart';
 import 'package:maker_greenhouse/views/greenhouses/widgets.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
-import '../../models/zone_model.dart';
+import '../../generated/l10n.dart';
 import '../../models/entity_marker.dart';
 import '../../models/greenhouse_model.dart';
-import '../../generated/l10n.dart';
-import '../../models/has_plants.dart';
+import '../../models/parameter_model.dart';
 import '../../shared/ui_constants.dart';
 
 class ControlsView extends ConsumerWidget {
@@ -17,21 +21,24 @@ class ControlsView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    double height = MediaQuery.of(context).size.height;
-    double width = MediaQuery.of(context).size.width;
+    final height = MediaQuery.of(context).size.height;
+    final width = MediaQuery.of(context).size.width;
     final greenhousesAsync = ref.watch(greenhouseNotifierProvider);
     return Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints:
-              BoxConstraints(maxHeight: height * 0.9, maxWidth: width * 0.95),
-          child: greenhousesAsync.when(
-              data: (List<Greenhouse> data) => _buildListView(data, context),
-              error: (Object error, StackTrace stackTrace) =>
-                  _buildError(ref, error),
-              loading: () => const LoadingIndicatorWidget()),
-        ));
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints:
+            BoxConstraints(maxHeight: height * 0.9, maxWidth: width * 0.95),
+        child: greenhousesAsync.when(
+          data: (data) => _buildListView(data, context, ref),
+          error: (error, _) => _buildError(ref, error),
+          loading: () => const LoadingIndicatorWidget(),
+        ),
+      ),
+    );
   }
+
+  // ─── Error state ────────────────────────────────────────────────────────────
 
   Widget _buildError(WidgetRef ref, Object error) {
     return Column(
@@ -47,95 +54,19 @@ class ControlsView extends ConsumerWidget {
     );
   }
 
-  Future<dynamic> buildPlantListBottomSheet(
-      BuildContext context, HasPlants entityWithPlants) {
-    return showMaterialModalBottomSheet(
-        elevation: 5,
-        context: context,
-        builder: (context) {
-          return PlantModal(
-            entityWithPlants: entityWithPlants,
-          );
-        });
-  }
+  // ─── List ────────────────────────────────────────────────────────────────────
 
-  void handleAddChild(
-      EntityMarker parent, BuildContext context, WidgetRef ref) async {
-    if (parent is Greenhouse) {
-      buildAddZoneBottomSheet(context, ref, parent);
-    } else if (parent is Zone) {
-      buildAddFlowerpotBottomSheet(context, ref, parent);
-    } else if (parent is HasPlants) {
-      buildPlantListBottomSheet(context, parent);
-    }
-    // Continue for other entity types if needed...
-  }
-
-  Future<dynamic> buildAddFlowerpotBottomSheet(
-      BuildContext context, WidgetRef ref, Zone zone) {
-    return showMaterialModalBottomSheet(
-        elevation: modalBottomSheetElevation,
-        context: context,
-        builder: (context) {
-          return FlowerpotModal(
-            appbarTitle: "Add new flowerpot",
-            onAction: (name, parameters) async {
-              if (zone.getId != null) {
-                ref
-                    .read(greenhouseNotifierProvider.notifier)
-                    .addNewFlowerpotToZone(Flowerpot(name: name, parameters: parameters), zone.getId!);
-              }
-            },
-            actionIcon: Icons.add,
-            actionLabel: "Add new flowerpot",
-            helpTitle: "Add new flowerpot help title placeholder",
-            helpContent: "Add new flowerpot help content placeholder",
-            parameters: [],
-          );
-        });
-  }
-
-  Future<dynamic> buildAddZoneBottomSheet(
-      BuildContext context, WidgetRef ref, Greenhouse parent) {
-    return showMaterialModalBottomSheet(
-        elevation: modalBottomSheetElevation,
-        context: context,
-        builder: (context) {
-          return ZoneModal(
-            appbarTitle: "Add new zone",
-            onAction: (name, parameters) async {
-              if (parent.getId != null) {
-                ref
-                    .read(greenhouseNotifierProvider.notifier)
-                    .addNewZoneToGreenhouse(Zone(name: name, parameters: parameters), parent.getId!);
-              }
-            },
-            actionIcon: Icons.add,
-            actionLabel: "Add new zone",
-            helpTitle: "Add new zone help title placeholder",
-            helpContent: "Add new zone help content placeholder",
-            parameters: [],
-          );
-        });
-  }
-
-  ListView _buildListView(List<Greenhouse> greenhouses, BuildContext context) {
-    greenhouses.sort((g1, g2) {
-      if (g1.id != null && g2.id != null) {
-        return g1.id!.compareTo(g2.id!);
-      } else {
-        return 0;
-      }
-    });
-    double height = MediaQuery.of(context).size.height;
+  ListView _buildListView(
+      List<Greenhouse> greenhouses, BuildContext context, WidgetRef ref) {
+    greenhouses.sort((a, b) => (a.id ?? 0).compareTo(b.id ?? 0));
+    final height = MediaQuery.of(context).size.height;
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
-      itemCount: greenhouses.length + 1, // Add 1 for the button
+      itemCount: greenhouses.length + 1,
       itemBuilder: (context, index) {
         if (index == greenhouses.length) {
           return AddNewGreenhouseButton(height: height);
         }
-
         final greenhouse = greenhouses[index];
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 10),
@@ -144,20 +75,263 @@ class ControlsView extends ConsumerWidget {
             borderRadius: const BorderRadius.all(Radius.circular(10)),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.5),
+                color: Colors.grey.withValues(alpha: 0.5),
                 spreadRadius: 5,
                 blurRadius: 7,
                 offset: const Offset(0, 3),
-              )
+              ),
             ],
           ),
           child: EntityTile(
             entity: greenhouse,
-            onAddChild: handleAddChild,
             elevation: 0,
+            onAddChild: (parent, ctx, r) => _handleAddChild(parent, ctx, r),
+            onEdit: (entity, ctx, r) => _handleEdit(entity, ctx, r),
+            onDelete: (entity, ctx, r) => _handleDelete(entity, ctx, r),
+            onPushToBoard: (gh, ctx, r) => _handlePush(gh, ctx, r),
+            onConfigureDevices: (gh, ctx, _) =>
+                _openDeviceConfig(gh, context),
+            onConfigureMapping: (gh, ctx, _) =>
+                _openMappingConfig(gh, context),
+            onAddParameter: (entity, param) =>
+                _handleAddParameter(entity, param, ref),
+            onDeleteParameter: (param) => _handleDeleteParameter(param, ref),
+            onRemovePlant: (plant, parent) =>
+                _handleRemovePlant(plant, parent, ref),
           ),
         );
       },
     );
+  }
+
+  // ─── Add child ───────────────────────────────────────────────────────────────
+
+  void _handleAddChild(
+      EntityMarker parent, BuildContext context, WidgetRef ref) {
+    if (parent is Greenhouse) {
+      _showAddZoneSheet(context, ref, parent);
+    } else if (parent is Zone) {
+      _showAddFlowerpotSheet(context, ref, parent);
+    } else if (parent is HasPlants) {
+      showMaterialModalBottomSheet(
+        elevation: 5,
+        context: context,
+        builder: (_) => PlantModal(entityWithPlants: parent),
+      );
+    }
+  }
+
+  void _showAddZoneSheet(
+      BuildContext context, WidgetRef ref, Greenhouse parent) {
+    showMaterialModalBottomSheet(
+      elevation: modalBottomSheetElevation,
+      context: context,
+      builder: (_) => ZoneModal(
+        appbarTitle: 'Add new zone',
+        onAction: (name, params) {
+          if (parent.getId != null) {
+            ref
+                .read(greenhouseNotifierProvider.notifier)
+                .addNewZoneToGreenhouse(
+                    Zone(name: name, parameters: params), parent.getId!);
+          }
+        },
+        actionIcon: Icons.add,
+        actionLabel: 'Add zone',
+        helpTitle: 'Add zone',
+        helpContent:
+            'Create a climate zone within the greenhouse. You can add parameters like temperature or humidity.',
+        parameters: const [],
+      ),
+    );
+  }
+
+  void _showAddFlowerpotSheet(
+      BuildContext context, WidgetRef ref, Zone zone) {
+    showMaterialModalBottomSheet(
+      elevation: modalBottomSheetElevation,
+      context: context,
+      builder: (_) => FlowerpotModal(
+        appbarTitle: 'Add new flowerpot',
+        onAction: (name, params) {
+          if (zone.getId != null) {
+            ref
+                .read(greenhouseNotifierProvider.notifier)
+                .addNewFlowerpotToZone(
+                    Flowerpot(name: name, parameters: params), zone.getId!);
+          }
+        },
+        actionIcon: Icons.add,
+        actionLabel: 'Add flowerpot',
+        helpTitle: 'Add flowerpot',
+        helpContent:
+            'Create a flowerpot within this zone. You can add parameters like soil moisture.',
+        parameters: const [],
+      ),
+    );
+  }
+
+  // ─── Edit ────────────────────────────────────────────────────────────────────
+
+  void _handleEdit(
+      EntityMarker entity, BuildContext context, WidgetRef ref) {
+    if (entity is Greenhouse) {
+      showMaterialModalBottomSheet(
+        elevation: modalBottomSheetElevation,
+        context: context,
+        builder: (_) => GreenhouseModal(
+          appbarTitle: 'Edit greenhouse',
+          initialName: entity.name,
+          initialLocation: entity.location,
+          initialIpAddress: entity.ipAddress,
+          parameters: entity.parameters,
+          onAction: (name, location, ip, params) {
+            ref.read(greenhouseNotifierProvider.notifier).editGreenhouse(
+                  Greenhouse(
+                      name: name,
+                      location: location,
+                      ipAddress: ip,
+                      parameters: params),
+                  entity.id!,
+                );
+          },
+          actionIcon: Icons.save,
+          actionLabel: 'Save',
+          helpTitle: 'Edit greenhouse',
+          helpContent: 'Update the greenhouse name, location, or IP address.',
+        ),
+      );
+    } else if (entity is Flowerpot && entity.id != null) {
+      showMaterialModalBottomSheet(
+        elevation: modalBottomSheetElevation,
+        context: context,
+        builder: (_) => RenameFlowerpotModal(flowerpot: entity),
+      );
+    }
+  }
+
+  // ─── Delete ──────────────────────────────────────────────────────────────────
+
+  void _handleDelete(
+      EntityMarker entity, BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Delete ${entity.getName}?'),
+        content: Text(
+          'This will permanently delete "${entity.getName}" '
+          'and all its contents. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          TextButton(
+            child: const Text('Delete',
+                style: TextStyle(color: Colors.red)),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _performDelete(entity, ref, context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _performDelete(
+      EntityMarker entity, WidgetRef ref, BuildContext context) {
+    final notifier = ref.read(greenhouseNotifierProvider.notifier);
+    if (entity is Greenhouse && entity.id != null) {
+      notifier.deleteGreenhouse(entity.id!);
+    } else if (entity is Zone && entity.id != null) {
+      final ghId = notifier.findGreenhouseIdForZone(entity.id!);
+      if (ghId != null) notifier.deleteZone(ghId, entity.id!);
+    } else if (entity is Flowerpot && entity.id != null) {
+      final zoneId = notifier.findZoneIdForFlowerpot(entity.id!);
+      if (zoneId != null) notifier.deleteFlowerpot(zoneId, entity.id!);
+    }
+  }
+
+  // ─── Push to board ───────────────────────────────────────────────────────────
+
+  void _handlePush(
+      Greenhouse greenhouse, BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Push model to board'),
+        content: Text(
+          'This will send the current greenhouse model to the board at '
+          '${greenhouse.ipAddress}. The board will update its state.',
+        ),
+        actions: [
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          TextButton(
+            child: const Text('Push'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              if (greenhouse.id != null) {
+                ref
+                    .read(greenhouseNotifierProvider.notifier)
+                    .pushModelToGreenhouse(greenhouse.id!);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Config screens ──────────────────────────────────────────────────────────
+
+  void _openDeviceConfig(Greenhouse greenhouse, BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DeviceConfigView(greenhouse: greenhouse),
+    ));
+  }
+
+  void _openMappingConfig(Greenhouse greenhouse, BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => MappingConfigView(greenhouse: greenhouse),
+    ));
+  }
+
+  // ─── Parameter management ────────────────────────────────────────────────────
+
+  Future<void> _handleAddParameter(
+      EntityMarker entity, Parameter param, WidgetRef ref) async {
+    final notifier = ref.read(greenhouseNotifierProvider.notifier);
+    final id = entity.getId;
+    if (id == null) return;
+    if (entity is Greenhouse) {
+      await notifier.addParameterToGreenhouse(param, id);
+    } else if (entity is Zone) {
+      await notifier.addParameterToZone(param, id);
+    } else if (entity is Flowerpot) {
+      await notifier.addParameterToFlowerpot(param, id);
+    }
+  }
+
+  Future<void> _handleDeleteParameter(
+      Parameter param, WidgetRef ref) async {
+    if (param.id == null) return;
+    await ref
+        .read(greenhouseNotifierProvider.notifier)
+        .deleteParameter(param.id!);
+  }
+
+  // ─── Plant management ────────────────────────────────────────────────────────
+
+  void _handleRemovePlant(
+      Plant plant, HasPlants parent, WidgetRef ref) {
+    if (plant.getId == null || parent.getId == null) return;
+    ref
+        .read(greenhouseNotifierProvider.notifier)
+        .removePlantFromFlowerpot(parent.getId!, plant.getId!);
   }
 }

@@ -54,9 +54,6 @@ class NotificationService {
       enableLights: true,
     );
 
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
     await _flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
@@ -101,10 +98,21 @@ class NotificationService {
   }
 
   Future<void> _deleteTokenFromServer(int userId) async {
-    ///TODO: implement
+    try {
+      await _ref.read(httpServiceProvider).request(
+            method: HttpMethod.delete,
+            endpoint: '/notifications/$userId',
+          );
+    } catch (e) {
+      debugPrint('Failed to delete FCM token from server: $e');
+    }
   }
 
   Future<void> clearToken() async {
+    final user = _ref.read(authNotifierProvider).value;
+    if (user != null) {
+      await _deleteTokenFromServer(user.id);
+    }
     await FirebaseMessaging.instance.deleteToken();
     await _ref.read(secureStorageProvider.notifier).delete(KEYS.fcmToken.name);
     _currentToken = null;

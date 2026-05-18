@@ -134,7 +134,6 @@ class AuthButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    double height = MediaQuery.of(context).size.height;
     final authState = ref.watch(authNotifierProvider);
     return authState.when(data: (_) {
       return ElevatedButton(
@@ -282,7 +281,6 @@ class _AuthViewState extends ConsumerState<AuthView> {
   Widget build(BuildContext context) {
     ref.watch(languageNotifierProvider);
     double width = MediaQuery.of(context).size.width;
-    double height = MediaQuery.of(context).size.height;
     return Scaffold(
       ///TODO: to be used in the future
       floatingActionButton: TextButton(

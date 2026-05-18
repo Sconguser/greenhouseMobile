@@ -5,11 +5,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 
 import '../../generated/l10n.dart';
+import '../../models/device_config_model.dart';
 import '../../models/greenhouse_model.dart';
 import '../../models/mapping_config_model.dart';
+import '../../models/parameter_model.dart';
+import '../../models/zone_model.dart';
+import '../../providers/device_config_notifier.dart';
 import '../../providers/mapping_config_notifier.dart';
 import '../../shared/loading_indicator.dart';
 import '../error/error_view.dart';
+
+// ─── Utility ──────────────────────────────────────────────────────────────────
+
+T? _firstOrNull<T>(List<T> list, bool Function(T) test) {
+  for (final item in list) {
+    if (test(item)) return item;
+  }
+  return null;
+}
+
+// ─── Top-level view ───────────────────────────────────────────────────────────
 
 class MappingConfigView extends ConsumerWidget {
   const MappingConfigView({super.key, required this.greenhouse});
@@ -38,11 +53,10 @@ class MappingConfigView extends ConsumerWidget {
   }
 }
 
-// ─── List state ───────────────────────────────────────────────────────────────
+// ─── List ─────────────────────────────────────────────────────────────────────
 
 class _MappingList extends ConsumerStatefulWidget {
-  const _MappingList(
-      {required this.greenhouse, required this.initial});
+  const _MappingList({required this.greenhouse, required this.initial});
 
   final Greenhouse greenhouse;
   final List<MappingConfig> initial;
@@ -62,6 +76,11 @@ class _MappingListState extends ConsumerState<_MappingList> {
 
   @override
   Widget build(BuildContext context) {
+    final devices = ref
+            .watch(deviceConfigNotifierProvider(widget.greenhouse.id!))
+            .valueOrNull ??
+        [];
+
     return Column(
       children: [
         Expanded(
@@ -72,18 +91,19 @@ class _MappingListState extends ConsumerState<_MappingList> {
                   itemCount: _mappings.length,
                   itemBuilder: (_, i) => _MappingCard(
                     mapping: _mappings[i],
-                    onEdit: () => _openForm(i),
-                    onDelete: () =>
-                        setState(() => _mappings.removeAt(i)),
+                    greenhouse: widget.greenhouse,
+                    devices: devices,
+                    onEdit: () => _openForm(i, devices),
+                    onDelete: () => setState(() => _mappings.removeAt(i)),
                   ),
                 ),
         ),
-        _buildBottomBar(context),
+        _buildBottomBar(context, devices),
       ],
     );
   }
 
-  Widget _buildBottomBar(BuildContext context) {
+  Widget _buildBottomBar(BuildContext context, List<DeviceConfig> devices) {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -91,7 +111,7 @@ class _MappingListState extends ConsumerState<_MappingList> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _openForm(null),
+                onPressed: () => _openForm(null, devices),
                 icon: const Icon(Icons.add),
                 label: Text(S.of(context).addMapping),
               ),
@@ -110,10 +130,11 @@ class _MappingListState extends ConsumerState<_MappingList> {
     );
   }
 
-  void _openForm(int? editIndex) {
+  void _openForm(int? editIndex, List<DeviceConfig> devices) {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => _MappingFormPage(
         greenhouse: widget.greenhouse,
+        devices: devices,
         initial: editIndex != null ? _mappings[editIndex] : null,
         onSubmit: (mapping) {
           setState(() {
@@ -144,8 +165,7 @@ class _MappingListState extends ConsumerState<_MappingList> {
             onPressed: () {
               Navigator.of(dialogCtx).pop();
               ref
-                  .read(mappingConfigNotifierProvider(
-                          widget.greenhouse.id!)
+                  .read(mappingConfigNotifierProvider(widget.greenhouse.id!)
                       .notifier)
                   .saveMappingConfig(_mappings);
             },
@@ -156,36 +176,37 @@ class _MappingListState extends ConsumerState<_MappingList> {
   }
 }
 
-// ─── Mapping card ─────────────────────────────────────────────────────────────
+// ─── Card ─────────────────────────────────────────────────────────────────────
 
 class _MappingCard extends StatelessWidget {
-  const _MappingCard(
-      {required this.mapping,
-      required this.onEdit,
-      required this.onDelete});
+  const _MappingCard({
+    required this.mapping,
+    required this.greenhouse,
+    required this.devices,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final MappingConfig mapping;
+  final Greenhouse greenhouse;
+  final List<DeviceConfig> devices;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final scopeLabel = _scopeLabel(mapping);
-    final readLabel = mapping.readDriver != null
-        ? 'read: ${mapping.readDriver} pin ${mapping.readPin}'
-        : null;
+    final scopeLabel = _scopeLabel();
+    final readLabel = _deviceLabel(mapping.readDriver, mapping.readPin, 'read');
     final writeLabel = mapping.writeDriver != null
-        ? 'write: ${mapping.writeDriver} pin ${mapping.writePin} '
-            '(${mapping.direction})'
+        ? '${_deviceLabel(mapping.writeDriver, mapping.writePin, 'write')} (${mapping.direction})'
         : null;
 
     return Card(
       child: ListTile(
         leading: const Icon(Icons.device_hub),
         title: Text('${mapping.paramName} @ $scopeLabel'),
-        subtitle: Text([readLabel, writeLabel]
-            .where((s) => s != null)
-            .join(' · ')),
+        subtitle: Text(
+            [readLabel, writeLabel].where((s) => s != null).join(' · ')),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -200,28 +221,46 @@ class _MappingCard extends StatelessWidget {
     );
   }
 
-  String _scopeLabel(MappingConfig m) {
-    switch (m.scope) {
+  String _scopeLabel() {
+    switch (mapping.scope) {
       case 'zone':
-        return 'zone ${m.zoneId}';
+        final zone =
+            _firstOrNull(greenhouse.zones, (z) => z.id == mapping.zoneId);
+        return zone?.name ?? 'zone ${mapping.zoneId}';
       case 'flowerpot':
-        return 'flowerpot ${m.flowerpotId}';
+        for (final zone in greenhouse.zones) {
+          final pot = _firstOrNull(
+              zone.flowerpots, (p) => p.id == mapping.flowerpotId);
+          if (pot != null) return '${zone.name} / ${pot.name}';
+        }
+        return 'flowerpot ${mapping.flowerpotId}';
       default:
         return 'greenhouse';
     }
   }
+
+  String? _deviceLabel(String? driver, int? pin, String prefix) {
+    if (driver == null) return null;
+    final device =
+        _firstOrNull(devices, (d) => d.driver == driver && d.pin == pin);
+    return device != null
+        ? '$prefix: ${device.name}'
+        : '$prefix: $driver pin $pin';
+  }
 }
 
-// ─── Mapping form (full page because it has many fields) ─────────────────────
+// ─── Form page ────────────────────────────────────────────────────────────────
 
 class _MappingFormPage extends StatefulWidget {
   const _MappingFormPage({
     required this.greenhouse,
+    required this.devices,
     this.initial,
     required this.onSubmit,
   });
 
   final Greenhouse greenhouse;
+  final List<DeviceConfig> devices;
   final MappingConfig? initial;
   final void Function(MappingConfig) onSubmit;
 
@@ -232,33 +271,90 @@ class _MappingFormPage extends StatefulWidget {
 class _MappingFormPageState extends State<_MappingFormPage> {
   final _formKey = GlobalKey<FormBuilderState>();
 
+  // Scope / parameter selection
+  String _scope = 'greenhouse';
+  int? _selectedZoneId;
+  int? _selectedFlowerpotId;
+  String? _selectedParamName;
+  bool _paramError = false;
+
+  // Read sensor
   bool _hasRead = false;
+  String? _selectedReadDeviceName;
   bool _hasMux = false;
-  bool _hasWrite = false;
+
+  // Analog scaling
   bool _hasScaling = false;
+
+  // Write actuator
+  bool _hasWrite = false;
+  String? _selectedWriteDeviceName;
+
+  static const _directions = ['increase', 'decrease'];
+  static const _outputModes = ['binary'];
 
   @override
   void initState() {
     super.initState();
     final m = widget.initial;
-    if (m != null) {
-      _hasRead = m.readDriver != null;
+    if (m == null) return;
+
+    _scope = m.scope;
+    _selectedZoneId = m.zoneId;
+    _selectedFlowerpotId = m.flowerpotId;
+    _selectedParamName = m.paramName;
+
+    _hasRead = m.readDriver != null;
+    if (_hasRead) {
+      final dev = _firstOrNull(
+          widget.devices, (d) => d.driver == m.readDriver && d.pin == m.readPin);
+      _selectedReadDeviceName = dev?.name;
       _hasMux = m.muxChannel != null;
-      _hasWrite = m.writeDriver != null;
-      _hasScaling = m.mapInMin != null;
+    }
+
+    _hasScaling = m.mapInMin != null;
+
+    _hasWrite = m.writeDriver != null;
+    if (_hasWrite) {
+      final dev = _firstOrNull(widget.devices,
+          (d) => d.driver == m.writeDriver && d.pin == m.writePin);
+      _selectedWriteDeviceName = dev?.name;
     }
   }
 
-  static const _scopes = ['greenhouse', 'zone', 'flowerpot'];
-  static const _readDrivers = ['digital', 'dht22', 'muxAnalog'];
-  static const _writeDrivers = ['digital'];
-  static const _directions = ['increase', 'decrease'];
-  static const _outputModes = ['binary'];
+  Zone? get _selectedZone => _firstOrNull(
+      widget.greenhouse.zones, (z) => z.id == _selectedZoneId);
+
+  get _selectedFlowerpot {
+    final zone = _selectedZone;
+    if (zone == null) return null;
+    return _firstOrNull(zone.flowerpots, (p) => p.id == _selectedFlowerpotId);
+  }
+
+  List<Parameter> get _scopeParameters {
+    switch (_scope) {
+      case 'zone':
+        return _selectedZone?.parameters ?? [];
+      case 'flowerpot':
+        return _selectedFlowerpot?.parameters ?? [];
+      default:
+        return widget.greenhouse.parameters;
+    }
+  }
+
+  DeviceConfig? get _selectedReadDevice =>
+      _firstOrNull(widget.devices, (d) => d.name == _selectedReadDeviceName);
+
+  bool get _readIsMux => _selectedReadDevice?.driver == 'muxAnalog';
+
+  List<DeviceConfig> get _writableDevices =>
+      widget.devices.where((d) => d.driver == 'digital').toList();
 
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
     final m = widget.initial;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(m == null ? s.addMapping : s.editMappingTitle),
@@ -278,60 +374,65 @@ class _MappingFormPageState extends State<_MappingFormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Scope ──────────────────────────────────────────────────────
-              _sectionHeader(s.scopeLabel),
-              FormBuilderDropdown<String>(
-                name: 'scope',
-                initialValue: m?.scope ?? 'greenhouse',
+              // ── Parameter ──────────────────────────────────────────────────
+              _sectionHeader(s.mappingParameterSection),
+              DropdownButtonFormField<String>(
+                value: _scope,
                 decoration: InputDecoration(
-                    labelText: s.scopeLabel, border: const OutlineInputBorder()),
-                items: _scopes
-                    .map((s) =>
-                        DropdownMenuItem(value: s, child: Text(s)))
+                    labelText: s.scopeLabel,
+                    border: const OutlineInputBorder()),
+                items: ['greenhouse', 'zone', 'flowerpot']
+                    .map((v) => DropdownMenuItem(value: v, child: Text(v)))
                     .toList(),
-                onChanged: (_) => setState(() {}),
+                onChanged: (v) => setState(() {
+                  _scope = v!;
+                  _selectedZoneId = null;
+                  _selectedFlowerpotId = null;
+                  _selectedParamName = null;
+                  _paramError = false;
+                }),
               ),
-              const SizedBox(height: 8),
-              if (_currentScope == 'zone' || _currentScope == 'flowerpot')
-                FormBuilderTextField(
-                  name: 'zoneId',
-                  initialValue: m?.zoneId?.toString(),
-                  decoration: InputDecoration(
-                      labelText: s.zoneIdLabel,
-                      border: const OutlineInputBorder()),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(),
-                    FormBuilderValidators.integer(),
-                  ]),
-                ),
-              if (_currentScope == 'flowerpot') ...[
+              if (_scope == 'zone' || _scope == 'flowerpot') ...[
                 const SizedBox(height: 8),
-                FormBuilderTextField(
-                  name: 'flowerpotId',
-                  initialValue: m?.flowerpotId?.toString(),
+                DropdownButtonFormField<int?>(
+                  value: _selectedZoneId,
                   decoration: InputDecoration(
-                      labelText: s.flowerpotIdLabel,
+                      labelText: s.selectZone,
                       border: const OutlineInputBorder()),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(),
-                    FormBuilderValidators.integer(),
-                  ]),
+                  items: widget.greenhouse.zones
+                      .where((z) => z.id != null)
+                      .map((z) =>
+                          DropdownMenuItem(value: z.id, child: Text(z.name)))
+                      .toList(),
+                  onChanged: (v) => setState(() {
+                    _selectedZoneId = v;
+                    _selectedFlowerpotId = null;
+                    _selectedParamName = null;
+                    _paramError = false;
+                  }),
+                ),
+              ],
+              if (_scope == 'flowerpot' && _selectedZone != null) ...[
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int?>(
+                  value: _selectedFlowerpotId,
+                  decoration: InputDecoration(
+                      labelText: s.selectFlowerpot,
+                      border: const OutlineInputBorder()),
+                  items: _selectedZone!.flowerpots
+                      .where((p) => p.id != null)
+                      .map((p) =>
+                          DropdownMenuItem(value: p.id, child: Text(p.name)))
+                      .toList(),
+                  onChanged: (v) => setState(() {
+                    _selectedFlowerpotId = v;
+                    _selectedParamName = null;
+                    _paramError = false;
+                  }),
                 ),
               ],
               const SizedBox(height: 8),
-              FormBuilderTextField(
-                name: 'paramName',
-                initialValue: m?.paramName,
-                decoration: InputDecoration(
-                    labelText: s.parameterNameLabel,
-                    hintText: s.paramNameHint,
-                    border: const OutlineInputBorder()),
-                validator: FormBuilderValidators.required(),
-              ),
+              _buildParamPicker(s),
 
               const SizedBox(height: 16),
               // ── Read sensor ────────────────────────────────────────────────
@@ -341,66 +442,172 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 title: Text(s.hasReadSensor),
                 onChanged: (v) => setState(() {
                   _hasRead = v;
-                  if (!v) _hasMux = false;
+                  if (!v) {
+                    _selectedReadDeviceName = null;
+                    _hasMux = false;
+                  }
                 }),
               ),
               if (_hasRead) ...[
+                if (widget.devices.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, bottom: 8),
+                    child: Text(s.noDevicesForSensor,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error)),
+                  )
+                else ...[
+                  DropdownButtonFormField<String?>(
+                    value: _selectedReadDeviceName,
+                    decoration: InputDecoration(
+                        labelText: s.selectReadDevice,
+                        border: const OutlineInputBorder()),
+                    items: widget.devices
+                        .map((d) => DropdownMenuItem(
+                              value: d.name,
+                              child:
+                                  Text('${d.name} (${d.driver}, pin ${d.pin})'),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() {
+                      _selectedReadDeviceName = v;
+                      _hasMux = false;
+                    }),
+                  ),
+                  if (_readIsMux) ...[
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      value: _hasMux,
+                      title: Text(s.usesMux),
+                      onChanged: (v) => setState(() => _hasMux = v),
+                    ),
+                    if (_hasMux) ...[
+                      FormBuilderTextField(
+                        name: 'muxChannel',
+                        initialValue: m?.muxChannel?.toString(),
+                        decoration: InputDecoration(
+                            labelText: s.muxChannelLabel,
+                            border: const OutlineInputBorder()),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                        validator: FormBuilderValidators.compose([
+                          FormBuilderValidators.required(),
+                          FormBuilderValidators.integer(),
+                        ]),
+                      ),
+                      const SizedBox(height: 8),
+                      FormBuilderTextField(
+                        name: 'muxSelPins',
+                        initialValue: m?.muxSelPins.join(','),
+                        decoration: InputDecoration(
+                            labelText: s.selectorPinsLabel,
+                            border: const OutlineInputBorder()),
+                      ),
+                    ],
+                  ],
+                ],
+              ],
+
+              const SizedBox(height: 16),
+              // ── Write actuator ─────────────────────────────────────────────
+              _sectionHeader(s.writeActuatorSection),
+              SwitchListTile(
+                value: _hasWrite,
+                title: Text(s.hasWriteActuator),
+                onChanged: (v) => setState(() {
+                  _hasWrite = v;
+                  if (!v) _selectedWriteDeviceName = null;
+                }),
+              ),
+              if (_hasWrite) ...[
+                if (_writableDevices.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(s.noWritableDevices,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error)),
+                  )
+                else
+                  DropdownButtonFormField<String?>(
+                    value: _selectedWriteDeviceName,
+                    decoration: InputDecoration(
+                        labelText: s.selectWriteDevice,
+                        border: const OutlineInputBorder()),
+                    items: _writableDevices
+                        .map((d) => DropdownMenuItem(
+                              value: d.name,
+                              child: Text('${d.name} (pin ${d.pin})'),
+                            ))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedWriteDeviceName = v),
+                  ),
+                const SizedBox(height: 8),
                 FormBuilderDropdown<String>(
-                  name: 'readDriver',
-                  initialValue:
-                      m?.readDriver ?? _readDrivers.first,
+                  name: 'direction',
+                  initialValue: m?.direction ?? _directions.first,
                   decoration: InputDecoration(
-                      labelText: s.readDriverLabel,
+                      labelText: s.directionLabel,
                       border: const OutlineInputBorder()),
-                  items: _readDrivers
-                      .map((d) =>
-                          DropdownMenuItem(value: d, child: Text(d)))
+                  items: _directions
+                      .map((d) => DropdownMenuItem(value: d, child: Text(d)))
                       .toList(),
                 ),
                 const SizedBox(height: 8),
                 FormBuilderTextField(
-                  name: 'readPin',
-                  initialValue: m?.readPin?.toString(),
+                  name: 'hysteresis',
+                  initialValue: m?.hysteresis?.toString(),
                   decoration: InputDecoration(
-                      labelText: s.readPinLabel,
+                      labelText: s.hysteresisLabel,
                       border: const OutlineInputBorder()),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(),
-                    FormBuilderValidators.integer(),
-                  ]),
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true, signed: false),
                 ),
                 const SizedBox(height: 8),
-                SwitchListTile(
-                  value: _hasMux,
-                  title: Text(s.usesMux),
-                  onChanged: (v) => setState(() => _hasMux = v),
+                FormBuilderCheckbox(
+                  name: 'activeLow',
+                  initialValue: m?.activeLow ?? false,
+                  title: Text(s.activeLowLabel),
                 ),
-                if (_hasMux) ...[
-                  FormBuilderTextField(
-                    name: 'muxChannel',
-                    initialValue: m?.muxChannel?.toString(),
-                    decoration: InputDecoration(
-                        labelText: s.muxChannelLabel,
-                        border: const OutlineInputBorder()),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    validator: FormBuilderValidators.compose([
-                      FormBuilderValidators.required(),
-                      FormBuilderValidators.integer(),
-                    ]),
+                const SizedBox(height: 8),
+                FormBuilderDropdown<String>(
+                  name: 'outputMode',
+                  initialValue: m?.outputMode ?? _outputModes.first,
+                  decoration: InputDecoration(
+                      labelText: s.outputModeLabel,
+                      border: const OutlineInputBorder()),
+                  items: _outputModes
+                      .map((o) => DropdownMenuItem(value: o, child: Text(o)))
+                      .toList(),
+                ),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(
+                    child: FormBuilderTextField(
+                      name: 'minOnMs',
+                      initialValue: m?.minOnMs?.toString(),
+                      decoration: InputDecoration(
+                          labelText: s.minOnTimeLabel,
+                          border: const OutlineInputBorder()),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  FormBuilderTextField(
-                    name: 'muxSelPins',
-                    initialValue: m?.muxSelPins.join(','),
-                    decoration: InputDecoration(
-                        labelText: s.selectorPinsLabel,
-                        border: const OutlineInputBorder()),
-                    keyboardType: TextInputType.text,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FormBuilderTextField(
+                      name: 'minOffMs',
+                      initialValue: m?.minOffMs?.toString(),
+                      decoration: InputDecoration(
+                          labelText: s.minOffTimeLabel,
+                          border: const OutlineInputBorder()),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    ),
                   ),
-                ],
+                ]),
               ],
 
               const SizedBox(height: 16),
@@ -466,113 +673,6 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 ]),
               ],
 
-              const SizedBox(height: 16),
-              // ── Write actuator ─────────────────────────────────────────────
-              _sectionHeader(s.writeActuatorSection),
-              SwitchListTile(
-                value: _hasWrite,
-                title: Text(s.hasWriteActuator),
-                onChanged: (v) => setState(() => _hasWrite = v),
-              ),
-              if (_hasWrite) ...[
-                FormBuilderDropdown<String>(
-                  name: 'writeDriver',
-                  initialValue:
-                      m?.writeDriver ?? _writeDrivers.first,
-                  decoration: InputDecoration(
-                      labelText: s.writeDriverLabel,
-                      border: const OutlineInputBorder()),
-                  items: _writeDrivers
-                      .map((d) =>
-                          DropdownMenuItem(value: d, child: Text(d)))
-                      .toList(),
-                ),
-                const SizedBox(height: 8),
-                FormBuilderTextField(
-                  name: 'writePin',
-                  initialValue: m?.writePin?.toString(),
-                  decoration: InputDecoration(
-                      labelText: s.writePinLabel,
-                      border: const OutlineInputBorder()),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(),
-                    FormBuilderValidators.integer(),
-                  ]),
-                ),
-                const SizedBox(height: 8),
-                FormBuilderDropdown<String>(
-                  name: 'direction',
-                  initialValue: m?.direction ?? _directions.first,
-                  decoration: InputDecoration(
-                      labelText: s.directionLabel,
-                      border: const OutlineInputBorder()),
-                  items: _directions
-                      .map((d) =>
-                          DropdownMenuItem(value: d, child: Text(d)))
-                      .toList(),
-                ),
-                const SizedBox(height: 8),
-                FormBuilderTextField(
-                  name: 'hysteresis',
-                  initialValue: m?.hysteresis?.toString(),
-                  decoration: InputDecoration(
-                      labelText: s.hysteresisLabel,
-                      border: const OutlineInputBorder()),
-                  keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: false),
-                ),
-                const SizedBox(height: 8),
-                FormBuilderCheckbox(
-                  name: 'activeLow',
-                  initialValue: m?.activeLow ?? false,
-                  title: Text(s.activeLowLabel),
-                ),
-                const SizedBox(height: 8),
-                FormBuilderDropdown<String>(
-                  name: 'outputMode',
-                  initialValue: m?.outputMode ?? _outputModes.first,
-                  decoration: InputDecoration(
-                      labelText: s.outputModeLabel,
-                      border: const OutlineInputBorder()),
-                  items: _outputModes
-                      .map((o) =>
-                          DropdownMenuItem(value: o, child: Text(o)))
-                      .toList(),
-                ),
-                const SizedBox(height: 8),
-                Row(children: [
-                  Expanded(
-                    child: FormBuilderTextField(
-                      name: 'minOnMs',
-                      initialValue: m?.minOnMs?.toString(),
-                      decoration: InputDecoration(
-                          labelText: s.minOnTimeLabel,
-                          border: const OutlineInputBorder()),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FormBuilderTextField(
-                      name: 'minOffMs',
-                      initialValue: m?.minOffMs?.toString(),
-                      decoration: InputDecoration(
-                          labelText: s.minOffTimeLabel,
-                          border: const OutlineInputBorder()),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly
-                      ],
-                    ),
-                  ),
-                ]),
-              ],
-
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _submit,
@@ -585,26 +685,91 @@ class _MappingFormPageState extends State<_MappingFormPage> {
     );
   }
 
-  String get _currentScope {
-    return _formKey.currentState?.fields['scope']?.value as String? ??
-        widget.initial?.scope ??
-        'greenhouse';
+  Widget _buildParamPicker(S s) {
+    if (_scope == 'zone' && _selectedZoneId == null) {
+      return const SizedBox.shrink();
+    }
+    if (_scope == 'flowerpot' &&
+        (_selectedZoneId == null || _selectedFlowerpotId == null)) {
+      return const SizedBox.shrink();
+    }
+
+    final params = _scopeParameters;
+
+    if (params.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(s.noParametersInScope,
+            style: TextStyle(color: Theme.of(context).colorScheme.error)),
+      );
+    }
+
+    final validNames = params.map((p) => p.name).toSet();
+    final currentValue =
+        validNames.contains(_selectedParamName) ? _selectedParamName : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DropdownButtonFormField<String?>(
+          value: currentValue,
+          decoration: InputDecoration(
+              labelText: s.selectParameter,
+              border: const OutlineInputBorder()),
+          items: params
+              .map((p) => DropdownMenuItem(value: p.name, child: Text(p.name)))
+              .toList(),
+          onChanged: (v) => setState(() {
+            _selectedParamName = v;
+            _paramError = false;
+          }),
+        ),
+        if (_paramError && _selectedParamName == null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 12),
+            child: Text(
+              s.parameterRequired,
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.error, fontSize: 12),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _sectionHeader(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(title,
-            style: const TextStyle(
-                fontSize: 15, fontWeight: FontWeight.bold)),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
       );
 
   void _submit() {
+    if (_scope == 'zone' && _selectedZoneId == null) return;
+    if (_scope == 'flowerpot' &&
+        (_selectedZoneId == null || _selectedFlowerpotId == null)) return;
+
+    if (_selectedParamName == null) {
+      setState(() => _paramError = true);
+      _formKey.currentState?.validate();
+      return;
+    }
+    setState(() => _paramError = false);
+
     _formKey.currentState?.validate();
     if (_formKey.currentState?.isValid != true) return;
+
     final f = _formKey.currentState!.fields;
 
-    String? raw(String name) =>
-        f[name]?.value?.toString().trim().let((s) => s.isEmpty ? null : s);
+    String? raw(String name) {
+      final v = f[name]?.value?.toString().trim();
+      return (v == null || v.isEmpty) ? null : v;
+    }
+
+    final readDevice = _hasRead ? _selectedReadDevice : null;
+    final writeDevice = _hasWrite
+        ? _firstOrNull(
+            widget.devices, (d) => d.name == _selectedWriteDeviceName)
+        : null;
 
     final selPinsRaw = raw('muxSelPins');
     final muxSelPins = selPinsRaw != null
@@ -615,49 +780,31 @@ class _MappingFormPageState extends State<_MappingFormPage> {
             .toList()
         : <int>[];
 
-    final mapping = MappingConfig(
-      scope: f['scope']!.value as String,
-      zoneId: int.tryParse(raw('zoneId') ?? ''),
-      flowerpotId: int.tryParse(raw('flowerpotId') ?? ''),
-      paramName: f['paramName']!.value as String,
-      readDriver: _hasRead ? f['readDriver']?.value as String? : null,
-      readPin:
-          _hasRead ? int.tryParse(raw('readPin') ?? '') : null,
-      muxChannel:
-          _hasMux ? int.tryParse(raw('muxChannel') ?? '') : null,
-      muxSelPins: _hasMux ? muxSelPins : [],
-      writeDriver: _hasWrite ? f['writeDriver']?.value as String? : null,
-      writePin:
-          _hasWrite ? int.tryParse(raw('writePin') ?? '') : null,
-      direction:
-          _hasWrite ? f['direction']?.value as String? : null,
+    final useMux = _hasRead && _readIsMux && _hasMux;
+
+    widget.onSubmit(MappingConfig(
+      scope: _scope,
+      zoneId: _selectedZoneId,
+      flowerpotId: _selectedFlowerpotId,
+      paramName: _selectedParamName!,
+      readDriver: readDevice?.driver,
+      readPin: readDevice?.pin,
+      muxChannel: useMux ? int.tryParse(raw('muxChannel') ?? '') : null,
+      muxSelPins: useMux ? muxSelPins : [],
+      writeDriver: writeDevice?.driver,
+      writePin: writeDevice?.pin,
+      direction: _hasWrite ? f['direction']?.value as String? : null,
       hysteresis:
           _hasWrite ? double.tryParse(raw('hysteresis') ?? '') : null,
       activeLow: _hasWrite ? f['activeLow']?.value as bool? : null,
       outputMode: _hasWrite ? f['outputMode']?.value as String? : null,
-      minOnMs:
-          _hasWrite ? int.tryParse(raw('minOnMs') ?? '') : null,
-      minOffMs:
-          _hasWrite ? int.tryParse(raw('minOffMs') ?? '') : null,
-      mapInMin: _hasScaling
-          ? double.tryParse(raw('mapInMin') ?? '')
-          : null,
-      mapInMax: _hasScaling
-          ? double.tryParse(raw('mapInMax') ?? '')
-          : null,
-      mapOutMin: _hasScaling
-          ? double.tryParse(raw('mapOutMin') ?? '')
-          : null,
-      mapOutMax: _hasScaling
-          ? double.tryParse(raw('mapOutMax') ?? '')
-          : null,
-    );
-    widget.onSubmit(mapping);
+      minOnMs: _hasWrite ? int.tryParse(raw('minOnMs') ?? '') : null,
+      minOffMs: _hasWrite ? int.tryParse(raw('minOffMs') ?? '') : null,
+      mapInMin: _hasScaling ? double.tryParse(raw('mapInMin') ?? '') : null,
+      mapInMax: _hasScaling ? double.tryParse(raw('mapInMax') ?? '') : null,
+      mapOutMin: _hasScaling ? double.tryParse(raw('mapOutMin') ?? '') : null,
+      mapOutMax: _hasScaling ? double.tryParse(raw('mapOutMax') ?? '') : null,
+    ));
     Navigator.of(context).pop();
   }
-}
-
-// Small utility to avoid nullable-chain verbosity
-extension _Let<T> on T {
-  R let<R>(R Function(T) block) => block(this);
 }

@@ -245,18 +245,18 @@ class ControlsView extends ConsumerWidget {
     final s = S.of(context);
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: Text(s.deleteConfirmTitle(entity.getName)),
         content: Text(s.deleteConfirmContent(entity.getName)),
         actions: [
           TextButton(
             child: Text(s.cancel),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
           ),
           TextButton(
             child: Text(s.delete, style: const TextStyle(color: Colors.red)),
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(dialogCtx).pop();
               _performDelete(entity, ref, context);
             },
           ),
@@ -286,18 +286,18 @@ class ControlsView extends ConsumerWidget {
     final s = S.of(context);
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: Text(s.pushToBoardTitle),
         content: Text(s.pushToBoardContent(greenhouse.ipAddress)),
         actions: [
           TextButton(
             child: Text(s.cancel),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
           ),
           TextButton(
             child: Text(s.push),
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(dialogCtx).pop();
               if (greenhouse.id != null) {
                 ref
                     .read(greenhouseNotifierProvider.notifier)

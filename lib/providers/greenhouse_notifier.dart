@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -15,20 +16,45 @@ part 'greenhouse_notifier.g.dart';
 class GreenhouseNotifier extends _$GreenhouseNotifier {
   @override
   Future<List<Greenhouse>> build() async {
-    return _loadGreenhouses();
+    return _fetchGreenhouses();
+  }
+
+  static bool _hasPendingSync(Greenhouse gh) =>
+      gh.deviceConfigSynced == false ||
+      gh.mappingConfigSynced == false ||
+      gh.modelSynced == false;
+
+  // Fetches without touching state — used by both initial load and silent refresh.
+  Future<List<Greenhouse>> _fetchGreenhouses() async {
+    final response = await ref
+        .read(httpServiceProvider)
+        .request(method: HttpMethod.get, endpoint: '/greenhouse/');
+    final utf8Body = utf8.decode(response.bodyBytes);
+    final List<dynamic> decoded = jsonDecode(utf8Body);
+    return decoded
+        .map((e) => Greenhouse.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  // Updates state data→data with no loading flash; re-schedules itself if
+  // any greenhouse still has a pending sync flag.
+  Future<void> silentRefresh() async {
+    try {
+      final updated = await _fetchGreenhouses();
+      state = AsyncValue.data(updated);
+      if (updated.any(_hasPendingSync)) {
+        final timer = Timer(const Duration(seconds: 5), () => silentRefresh());
+        ref.onDispose(timer.cancel);
+      }
+    } catch (_) {
+      // Don't break the existing view on a background refresh failure.
+    }
   }
 
   Future<List<Greenhouse>> _loadGreenhouses() async {
     state = AsyncValue.loading();
     try {
-      final response = await ref
-          .read(httpServiceProvider)
-          .request(method: HttpMethod.get, endpoint: '/greenhouse/');
-      final utf8Body = utf8.decode(response.bodyBytes);
-      final List<dynamic> decoded = jsonDecode(utf8Body);
-      return decoded
-          .map((e) => Greenhouse.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return await _fetchGreenhouses();
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -103,6 +129,7 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
           method: HttpMethod.post,
           endpoint: '/greenhouse/$greenhouseId/push',
         );
+    await silentRefresh();
   }
 
   // ─── Zone CRUD ───────────────────────────────────────────────────────────────

@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/device_config_model.dart';
+import 'greenhouse_notifier.dart';
 import 'http_conf.dart';
 import 'http_service.dart';
 
@@ -36,6 +38,7 @@ class DeviceConfigNotifier extends _$DeviceConfigNotifier {
             body: configs.map((c) => c.toJson()).toList(),
           );
       state = AsyncValue.data(configs);
+      unawaited(ref.read(greenhouseNotifierProvider.notifier).silentRefresh());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;

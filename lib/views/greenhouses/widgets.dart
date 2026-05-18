@@ -106,14 +106,12 @@ class EntityTile extends ConsumerWidget {
           entity.getName,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        subtitle: isGreenhouse && greenhouse!.lastUpdate != null
-            ? Text(
-                _formatLastUpdate(greenhouse.lastUpdate!),
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              )
+        subtitle: isGreenhouse
+            ? _GreenhouseSubtitle(greenhouse: greenhouse!)
             : null,
         trailing: _buildTrailingMenu(context, ref),
         children: [
+          if (isGreenhouse) _GreenhouseSyncStatus(greenhouse: greenhouse!),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2.0),
             child: Column(
@@ -327,12 +325,6 @@ class EntityTile extends ConsumerWidget {
     return s.addNewGreenhouseAppbarButton;
   }
 
-  String _formatLastUpdate(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-'
-        '${dt.day.toString().padLeft(2, '0')} '
-        '${dt.hour.toString().padLeft(2, '0')}:'
-        '${dt.minute.toString().padLeft(2, '0')}';
-  }
 }
 
 // â”€â”€â”€ Parameters control panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1372,18 +1364,18 @@ class PlantTile extends StatelessWidget {
     final s = S.of(context);
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: Text(s.removePlantTitle),
         content: Text(s.removePlantContent(plant.name)),
         actions: [
           TextButton(
             child: Text(s.cancel),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
           ),
           TextButton(
             child: Text(s.remove, style: const TextStyle(color: Colors.orange)),
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(dialogCtx).pop();
               onRemove?.call();
             },
           ),
@@ -2095,3 +2087,104 @@ class _RenameFlowerpotModalState
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 SizedBox buildSizedBoxBetweenInputs() => const SizedBox(height: 5);
+
+String _formatLastUpdate(DateTime dt) =>
+    '${dt.year}-${dt.month.toString().padLeft(2, '0')}-'
+    '${dt.day.toString().padLeft(2, '0')} '
+    '${dt.hour.toString().padLeft(2, '0')}:'
+    '${dt.minute.toString().padLeft(2, '0')}';
+
+// ─── Greenhouse subtitle (last update + out-of-sync warning) ─────────────────
+
+class _GreenhouseSubtitle extends StatelessWidget {
+  const _GreenhouseSubtitle({required this.greenhouse});
+
+  final Greenhouse greenhouse;
+
+  bool get _anyUnsynced =>
+      _syncStateOf(greenhouse.deviceConfigSynced) != _SyncState.synced ||
+      _syncStateOf(greenhouse.mappingConfigSynced) != _SyncState.synced ||
+      _syncStateOf(greenhouse.modelSynced) != _SyncState.synced;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        if (greenhouse.lastUpdate != null)
+          Text(
+            _formatLastUpdate(greenhouse.lastUpdate!),
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        if (_anyUnsynced) ...[
+          const SizedBox(width: 6),
+          const Icon(Icons.sync_problem, size: 14, color: Colors.orange),
+          const SizedBox(width: 2),
+          Text(
+            S.of(context).syncStatePending,
+            style: const TextStyle(fontSize: 12, color: Colors.orange),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ─── Greenhouse sync status ───────────────────────────────────────────────────
+
+enum _SyncState { notConfigured, pending, synced }
+
+_SyncState _syncStateOf(bool? flag) {
+  if (flag == null) return _SyncState.notConfigured;
+  return flag ? _SyncState.synced : _SyncState.pending;
+}
+
+class _GreenhouseSyncStatus extends StatelessWidget {
+  const _GreenhouseSyncStatus({required this.greenhouse});
+
+  final Greenhouse greenhouse;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(
+        children: [
+          _SyncChip(label: s.syncLabelConfig,     state: _syncStateOf(greenhouse.deviceConfigSynced)),
+          const SizedBox(width: 8),
+          _SyncChip(label: s.syncLabelMapping,    state: _syncStateOf(greenhouse.mappingConfigSynced)),
+          const SizedBox(width: 8),
+          _SyncChip(label: s.syncLabelParameters, state: _syncStateOf(greenhouse.modelSynced)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SyncChip extends StatelessWidget {
+  const _SyncChip({required this.label, required this.state});
+
+  final String label;
+  final _SyncState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final (color, icon, stateLabel) = switch (state) {
+      _SyncState.notConfigured => (Colors.grey,   Icons.radio_button_unchecked, s.syncStateNotConfigured),
+      _SyncState.pending       => (Colors.orange,  Icons.sync,                  s.syncStatePending),
+      _SyncState.synced        => (Colors.green,   Icons.check_circle,          s.syncStateSynced),
+    };
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          '$label: $stateLabel',
+          style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
+}

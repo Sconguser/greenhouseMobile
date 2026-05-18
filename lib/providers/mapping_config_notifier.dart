@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/mapping_config_model.dart';
+import 'greenhouse_notifier.dart';
 import 'http_conf.dart';
 import 'http_service.dart';
 
@@ -36,6 +38,7 @@ class MappingConfigNotifier extends _$MappingConfigNotifier {
             body: mappings.map((m) => m.toJson()).toList(),
           );
       state = AsyncValue.data(mappings);
+      unawaited(ref.read(greenhouseNotifierProvider.notifier).silentRefresh());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;

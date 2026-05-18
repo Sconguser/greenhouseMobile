@@ -220,5 +220,12 @@
     "addNewGreenhouseTextFieldGreenhouseLocationLabel":"Location of the greenhouse",
     "addNewGreenhouseTextFieldGreenhouseIpAddressLabel":"Greenhouse ip address",
     "addNewGreenhouseTextFieldGreenhouseIpAddressErrorLabel":"A correct ip address needs to be provided",
-    "test":"test"
+    "test":"test",
+
+    "syncLabelConfig":"Config",
+    "syncLabelMapping":"Mapping",
+    "syncLabelParameters":"Parameters",
+    "syncStateNotConfigured":"Not set",
+    "syncStatePending":"Pending",
+    "syncStateSynced":"Ready"
 }

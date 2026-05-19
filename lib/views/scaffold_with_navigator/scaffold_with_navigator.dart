@@ -42,8 +42,8 @@ class _ScaffoldWithNavState extends ConsumerState<ScaffoldWithNav> {
           label: S.current.bottomNavBarControls,
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.analytics),
-          label: S.current.bottomNavBarAnalytics,
+          icon: Icon(Icons.local_florist),
+          label: S.current.drawerPlants,
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.settings),
@@ -59,7 +59,7 @@ class _ScaffoldWithNavState extends ConsumerState<ScaffoldWithNav> {
         children: [
           _buildDrawerItem(0, Icons.home, S.current.bottomNavBarControls, ref),
           _buildDrawerItem(
-              1, Icons.analytics, S.current.bottomNavBarAnalytics, ref),
+              1, Icons.local_florist, S.current.drawerPlants, ref),
           _buildDrawerItem(
               2, Icons.settings, S.current.bottomNavBarSettings, ref),
         ],

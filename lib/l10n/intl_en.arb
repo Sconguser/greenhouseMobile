@@ -231,5 +231,10 @@
     "syncLabelModel":"Model",
     "syncStateNotConfigured":"Not set",
     "syncStatePending":"Pending",
-    "syncStateSynced":"Ready"
+    "syncStateSynced":"Ready",
+
+    "drawerPlants":"Plants",
+    "plantCatalogueTitle":"Plant catalogue",
+    "plantRequirementsAction":"Requirements",
+    "noPlantsYet":"No plants in catalogue yet."
 }

@@ -8,6 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../views/error/error_view.dart';
 import '../views/analytics/analytics_view.dart';
 import '../views/greenhouses/controls_view.dart';
+import '../views/greenhouses/widgets.dart';
 import '../views/splash/splash_view.dart';
 import 'auth_notifier.dart';
 
@@ -17,6 +18,7 @@ enum AppRoutes {
   login,
   home,
   analytics,
+  plants,
   splash,
   settings,
   settingsUnauthorized,
@@ -86,6 +88,14 @@ GoRouter goRouter(GoRouterRef ref) {
               pageBuilder: (context, state) => MaterialPage(
                 key: state.pageKey,
                 child: const AnalyticsView(),
+              ),
+            ),
+            GoRoute(
+              path: AppRoutes.plants.path,
+              name: AppRoutes.plants.name,
+              pageBuilder: (context, state) => MaterialPage(
+                key: state.pageKey,
+                child: const PlantCataloguePage(),
               ),
             ),
             GoRoute(

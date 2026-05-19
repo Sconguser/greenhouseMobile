@@ -1569,6 +1569,135 @@ class PlantModal extends StatelessWidget {
 
 // â”€â”€â”€ Add new plant form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+// ─── Plant catalogue page (standalone, accessible from drawer) ───────────────
+
+class PlantCataloguePage extends ConsumerWidget {
+  const PlantCataloguePage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(context);
+    final plantsAsync = ref.watch(plantListNotifierProvider);
+    return Scaffold(
+      appBar: AppBar(title: Text(s.plantCatalogueTitle)),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AddNewPlantForm()),
+        ),
+        child: const Icon(Icons.add),
+      ),
+      body: plantsAsync.when(
+        data: (plants) => plants.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.local_florist,
+                        size: 48, color: Colors.grey),
+                    const SizedBox(height: 12),
+                    Text(s.noPlantsYet,
+                        style: const TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.all(8),
+                itemCount: plants.length,
+                itemBuilder: (ctx, i) {
+                  final plant = plants[i];
+                  return Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.local_florist),
+                      title: Text(plant.name),
+                      subtitle: plant.description.isNotEmpty
+                          ? Text(plant.description)
+                          : null,
+                      trailing: PopupMenuButton<_PlantAction>(
+                        onSelected: (action) =>
+                            _handleAction(ctx, ref, plant, action),
+                        itemBuilder: (ctx) => [
+                          PopupMenuItem(
+                            value: _PlantAction.edit,
+                            child: ListTile(
+                              leading: const Icon(Icons.edit),
+                              title: Text(S.of(ctx).edit),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: _PlantAction.requirements,
+                            child: ListTile(
+                              leading: const Icon(Icons.checklist),
+                              title:
+                                  Text(S.of(ctx).plantRequirementsAction),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: _PlantAction.delete,
+                            child: ListTile(
+                              leading: const Icon(Icons.delete,
+                                  color: Colors.red),
+                              title: Text(S.of(ctx).delete,
+                                  style: const TextStyle(
+                                      color: Colors.red)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+        error: (e, _) => ErrorScreen(
+          error: e,
+          onRetry: () => ref.invalidate(plantListNotifierProvider),
+        ),
+        loading: () => const LoadingIndicatorWidget(),
+      ),
+    );
+  }
+
+  void _handleAction(BuildContext context, WidgetRef ref, Plant plant,
+      _PlantAction action) {
+    switch (action) {
+      case _PlantAction.edit:
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => EditPlantPage(plant: plant)),
+        );
+      case _PlantAction.requirements:
+        Navigator.of(context).push(
+          MaterialPageRoute(
+              builder: (_) => PlantRequirementsPage(plant: plant)),
+        );
+      case _PlantAction.delete:
+        if (plant.id == null) return;
+        final s = S.of(context);
+        showDialog(
+          context: context,
+          builder: (dialogCtx) => AlertDialog(
+            title: Text(s.deleteConfirmTitle(plant.name)),
+            content: Text(s.deletePlantContent(plant.name)),
+            actions: [
+              TextButton(
+                child: Text(s.cancel),
+                onPressed: () => Navigator.pop(dialogCtx),
+              ),
+              TextButton(
+                child: Text(s.delete,
+                    style: const TextStyle(color: Colors.red)),
+                onPressed: () {
+                  Navigator.pop(dialogCtx);
+                  ref
+                      .read(plantListNotifierProvider.notifier)
+                      .deletePlant(plant.id!);
+                },
+              ),
+            ],
+          ),
+        );
+    }
+  }
+}
+
 class AddNewPlantForm extends ConsumerStatefulWidget {
   const AddNewPlantForm({super.key});
 
@@ -1578,29 +1707,165 @@ class AddNewPlantForm extends ConsumerStatefulWidget {
 
 class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
   final _formKey = GlobalKey<FormBuilderState>();
+  final List<Requirement> _pendingRequirements = [];
+  bool _isSubmitting = false;
+
+  static const _paramTypes = [ParameterType.VALUE, ParameterType.TOGGLE];
+
+  Future<void> _submit() async {
+    _formKey.currentState?.validate();
+    if (_formKey.currentState?.isValid != true) return;
+    final fields = _formKey.currentState!.fields;
+    setState(() => _isSubmitting = true);
+    try {
+      final plant = await ref
+          .read(plantListNotifierProvider.notifier)
+          .addPlant(Plant(
+            name: fields['name']!.value as String,
+            description: fields['description']!.value as String,
+          ));
+      for (final req in _pendingRequirements) {
+        await ref
+            .read(plantListNotifierProvider.notifier)
+            .addRequirement(req, plant.id!);
+      }
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  void _showAddRequirementDialog() {
+    final reqFormKey = GlobalKey<FormBuilderState>();
+    final s = S.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(s.addRequirement),
+        content: SingleChildScrollView(
+          child: FormBuilder(
+            key: reqFormKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FormBuilderTextField(
+                  name: 'name',
+                  decoration: InputDecoration(
+                      labelText: s.requirementNameLabel,
+                      border: const OutlineInputBorder()),
+                  validator: FormBuilderValidators.required(),
+                ),
+                buildSizedBoxBetweenInputs(),
+                Row(children: [
+                  Expanded(
+                    child: FormBuilderTextField(
+                      name: 'lower',
+                      decoration: InputDecoration(
+                          labelText: s.requirementLowerThreshold,
+                          border: const OutlineInputBorder()),
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true, signed: true),
+                      validator: FormBuilderValidators.compose([
+                        FormBuilderValidators.required(),
+                        FormBuilderValidators.numeric(),
+                      ]),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FormBuilderTextField(
+                      name: 'upper',
+                      decoration: InputDecoration(
+                          labelText: s.requirementUpperThreshold,
+                          border: const OutlineInputBorder()),
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true, signed: true),
+                      validator: FormBuilderValidators.compose([
+                        FormBuilderValidators.required(),
+                        FormBuilderValidators.numeric(),
+                      ]),
+                    ),
+                  ),
+                ]),
+                buildSizedBoxBetweenInputs(),
+                Row(children: [
+                  Expanded(
+                    child: FormBuilderTextField(
+                      name: 'unit',
+                      decoration: InputDecoration(
+                          labelText: s.requirementUnitLabel,
+                          border: const OutlineInputBorder()),
+                      validator: FormBuilderValidators.required(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FormBuilderDropdown<ParameterType>(
+                      name: 'paramType',
+                      initialValue: ParameterType.VALUE,
+                      decoration: InputDecoration(
+                          labelText: s.requirementTypeLabel,
+                          border: const OutlineInputBorder()),
+                      items: _paramTypes
+                          .map((t) => DropdownMenuItem(
+                              value: t, child: Text(t.name)))
+                          .toList(),
+                    ),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: Text(s.cancel),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+          ),
+          ElevatedButton(
+            child: Text(s.addRequirement),
+            onPressed: () {
+              reqFormKey.currentState?.validate();
+              if (reqFormKey.currentState?.isValid != true) return;
+              final f = reqFormKey.currentState!.fields;
+              final req = Requirement(
+                name: f['name']!.value as String,
+                lowerThreshold:
+                    double.parse(f['lower']!.value as String),
+                upperThreshold:
+                    double.parse(f['upper']!.value as String),
+                unit: f['unit']!.value as String,
+                parameterType:
+                    f['paramType']!.value as ParameterType,
+              );
+              setState(() => _pendingRequirements.add(req));
+              Navigator.of(dialogCtx).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
+    final s = S.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(S.of(context).addNewPlantAppbarTitle,
+        title: Text(s.addNewPlantAppbarTitle,
             style: const TextStyle(fontSize: 17)),
         actions: [
           ElevatedButton.icon(
-            onPressed: () {
-              _formKey.currentState?.validate();
-              if (_formKey.currentState?.isValid == true) {
-                final fields = _formKey.currentState!.fields;
-                ref.read(plantListNotifierProvider.notifier).addPlant(Plant(
-                      name: fields['name']!.value as String,
-                      description: fields['description']!.value as String,
-                    ));
-                Navigator.of(context).pop();
-              }
-            },
-            icon: const Icon(Icons.add, size: 20),
-            label: Text(S.of(context).addNewPlantAppbarButton,
+            onPressed: _isSubmitting ? null : _submit,
+            icon: _isSubmitting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add, size: 20),
+            label: Text(s.addNewPlantAppbarButton,
                 style: const TextStyle(fontSize: 15)),
           ),
           IconButton(
@@ -1608,15 +1873,15 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
             onPressed: () => showDialog(
               context: context,
               builder: (dialogCtx) => AlertDialog(
-                title: Text(S.of(context).addNewPlantHelpTitle,
+                title: Text(s.addNewPlantHelpTitle,
                     style: const TextStyle(fontSize: 25)),
-                content: Text(S.of(context).addNewPlantHelpContent,
+                content: Text(s.addNewPlantHelpContent,
                     style: const TextStyle(fontSize: 15)),
                 actions: [
                   TextButton(
-                    child: Text(S.of(context).addNewPlantHelpDismiss,
-                        style:
-                            const TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(s.addNewPlantHelpDismiss,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold)),
                     onPressed: () => Navigator.of(dialogCtx).pop(),
                   ),
                 ],
@@ -1635,32 +1900,72 @@ class _AddNewPlantFormState extends ConsumerState<AddNewPlantForm> {
             key: _formKey,
             child: SingleChildScrollView(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 5),
                   FormBuilderTextField(
                     name: 'name',
                     decoration: InputDecoration(
-                      labelText:
-                          S.of(context).addNewPlantTextFieldPlantName,
+                      labelText: s.addNewPlantTextFieldPlantName,
                       border: const OutlineInputBorder(),
                     ),
                     validator: FormBuilderValidators.required(
-                        errorText:
-                            S.of(context).authThisFieldCannotBeEmpty),
+                        errorText: s.authThisFieldCannotBeEmpty),
                   ),
                   buildSizedBoxBetweenInputs(),
                   FormBuilderTextField(
                     name: 'description',
                     maxLines: 5,
                     decoration: InputDecoration(
-                      labelText:
-                          S.of(context).addNewPlantTextFieldDescription,
+                      labelText: s.addNewPlantTextFieldDescription,
                       border: const OutlineInputBorder(),
                     ),
                     validator: FormBuilderValidators.required(
-                        errorText:
-                            S.of(context).authThisFieldCannotBeEmpty),
+                        errorText: s.authThisFieldCannotBeEmpty),
                   ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Text(s.requirementsLabel,
+                          style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold)),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: _showAddRequirementDialog,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: Text(s.addRequirement),
+                      ),
+                    ],
+                  ),
+                  if (_pendingRequirements.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(s.requirementsEmptyState,
+                          style: const TextStyle(color: Colors.grey)),
+                    )
+                  else
+                    ..._pendingRequirements.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final req = entry.value;
+                      return Card(
+                        child: ListTile(
+                          dense: true,
+                          title: Text(req.name),
+                          subtitle: Text(
+                            '${req.parameterType.name} · '
+                            '${req.lowerThreshold}–${req.upperThreshold} ${req.unit}',
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete,
+                                color: Colors.red, size: 20),
+                            onPressed: () => setState(
+                                () => _pendingRequirements.removeAt(i)),
+                          ),
+                        ),
+                      );
+                    }),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),

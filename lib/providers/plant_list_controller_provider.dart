@@ -33,7 +33,8 @@ class PlantListNotifier extends _$PlantListNotifier {
     }
   }
 
-  Future<void> addPlant(Plant newPlant) async {
+  Future<Plant> addPlant(Plant newPlant) async {
+    final knownIds = (state.valueOrNull ?? []).map((p) => p.id).toSet();
     try {
       final response = await ref.read(httpServiceProvider).request(
             method: HttpMethod.post,
@@ -41,10 +42,12 @@ class PlantListNotifier extends _$PlantListNotifier {
             body: newPlant.toJson(),
           );
       if (response.statusCode == 200) {
-        if (state is AsyncData<List<Plant>>) {
-          final current = (state as AsyncData<List<Plant>>).value;
-          state = AsyncValue.data([...current, newPlant]);
-        }
+        final plants = await _loadPlants();
+        state = AsyncValue.data(plants);
+        return plants.firstWhere(
+          (p) => p.id != null && !knownIds.contains(p.id),
+          orElse: () => plants.lastWhere((p) => p.name == newPlant.name),
+        );
       } else {
         throw Exception('Failed to add plant');
       }

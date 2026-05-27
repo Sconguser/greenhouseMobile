@@ -444,9 +444,9 @@ class _ParametersControlPanelState
               ),
           ],
         ),
-        Text('Current: ${parameter.currentValue} ${parameter.unit ?? ''}',
+        Text('Current: ${parameter.currentValue ?? '—'} ${parameter.unit ?? ''}',
             style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        Text('Requested: ${parameter.requestedValue} ${parameter.unit ?? ''}',
+        Text('Requested: ${parameter.requestedValue ?? '—'} ${parameter.unit ?? ''}',
             style: const TextStyle(fontSize: 12, color: Colors.grey)),
         Row(
           children: [
@@ -530,7 +530,7 @@ class _ParametersControlPanelState
     switch (parameter.parameterType) {
       case ParameterType.TOGGLE:
         return Checkbox(
-          value: parameter.requestedValue == 1,
+          value: (parameter.requestedValue ?? 0) == 1,
           onChanged: parameter.mutable
               ? (newVal) {
                   setState(() {
@@ -550,7 +550,7 @@ class _ParametersControlPanelState
           disabled: !parameter.mutable,
           tooltip:
               FlutterSliderTooltip(rightSuffix: Text(parameter.unit ?? '')),
-          values: [parameter.requestedValue],
+          values: [parameter.requestedValue ?? parameter.min],
           max: parameter.max,
           min: parameter.min,
           onDragging: (_, lower, __) {

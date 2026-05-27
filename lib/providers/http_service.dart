@@ -17,9 +17,8 @@ HttpService httpService(Ref ref) => HttpService(ref);
 
 class HttpService {
   final Ref _ref;
-  final http.Client _client;
 
-  HttpService(this._ref) : _client = http.Client();
+  HttpService(this._ref);
 
   Future<http.Response> request<T>({
     required HttpMethod method,
@@ -28,25 +27,28 @@ class HttpService {
     Map<String, dynamic>? queryParams,
     bool requireAuth = true,
   }) async {
+    // Each request gets its own client so that parallel requests don't share
+    // state and closing one doesn't kill the others.
+    final client = http.Client();
     try {
       final uri = _buildUri(endpoint, queryParams);
-
       final headers = await _buildHeaders(requireAuth);
       final config = _ref.read(httpConfigProvider);
 
       final response = await _executeRequest(
+          client: client,
           method: method,
           uri: uri,
           headers: headers,
           body: body,
-          timeout: config.value?.timeout ?? Duration(seconds: 10));
+          timeout: config.value?.timeout ?? const Duration(seconds: 10));
 
       return _handleResponse(response);
     } catch (e) {
       debugPrint('HTTP Error: $e');
       rethrow;
     } finally {
-      _client.close();
+      client.close();
     }
   }
 
@@ -80,6 +82,7 @@ class HttpService {
   }
 
   Future<http.Response> _executeRequest({
+    required http.Client client,
     required HttpMethod method,
     required Uri uri,
     required Map<String, String> headers,
@@ -90,21 +93,21 @@ class HttpService {
 
     switch (method) {
       case HttpMethod.get:
-        return _client.get(uri, headers: headers).timeout(timeout);
+        return client.get(uri, headers: headers).timeout(timeout);
       case HttpMethod.post:
-        return _client
+        return client
             .post(uri, headers: headers, body: bodyJson)
             .timeout(timeout);
       case HttpMethod.put:
-        return _client
+        return client
             .put(uri, headers: headers, body: bodyJson)
             .timeout(timeout);
       case HttpMethod.patch:
-        return _client
+        return client
             .patch(uri, headers: headers, body: bodyJson)
             .timeout(timeout);
       case HttpMethod.delete:
-        return _client.delete(uri, headers: headers).timeout(timeout);
+        return client.delete(uri, headers: headers).timeout(timeout);
     }
   }
 

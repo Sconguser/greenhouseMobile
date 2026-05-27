@@ -21,8 +21,9 @@ class NavigationNotifier extends _$NavigationNotifier {
   int _calculateSelectedIndex(GoRouter router) {
     final location = router.routeInformationProvider.value.uri.toString();
     if (location.startsWith(AppRoutes.home.path)) return 0;
-    if (location.startsWith(AppRoutes.plants.path)) return 1;
-    if (location.startsWith(AppRoutes.settings.path)) return 2;
+    if (location.startsWith(AppRoutes.analytics.path)) return 1;
+    if (location.startsWith(AppRoutes.plants.path)) return 2;
+    if (location.startsWith(AppRoutes.settings.path)) return 3;
     return 0;
   }
 
@@ -30,8 +31,9 @@ class NavigationNotifier extends _$NavigationNotifier {
     state = index;
     final path = switch (index) {
       0 => AppRoutes.home.path,
-      1 => AppRoutes.plants.path,
-      2 => AppRoutes.settings.path,
+      1 => AppRoutes.analytics.path,
+      2 => AppRoutes.plants.path,
+      3 => AppRoutes.settings.path,
       _ => AppRoutes.home.path,
     };
     ref.read(goRouterProvider).go(path);

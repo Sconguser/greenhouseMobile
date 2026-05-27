@@ -30,6 +30,7 @@ class ControlsView extends ConsumerWidget {
         constraints:
             BoxConstraints(maxHeight: height * 0.9, maxWidth: width * 0.95),
         child: greenhousesAsync.when(
+          skipLoadingOnReload: true,
           data: (data) => _buildListView(data, context, ref),
           error: (error, _) => _buildError(ref, error),
           loading: () => const LoadingIndicatorWidget(),
@@ -56,12 +57,30 @@ class ControlsView extends ConsumerWidget {
 
   // ─── List ────────────────────────────────────────────────────────────────────
 
-  ListView _buildListView(
+  Widget _buildListView(
       List<Greenhouse> greenhouses, BuildContext context, WidgetRef ref) {
     greenhouses.sort((a, b) => (a.id ?? 0).compareTo(b.id ?? 0));
     final height = MediaQuery.of(context).size.height;
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
+    return Column(
+      children: [
+        // ── Refresh row ─────────────────────────────────────────────────────
+        Align(
+          alignment: Alignment.centerRight,
+          child: IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+            onPressed: () =>
+                ref.read(greenhouseNotifierProvider.notifier).silentRefresh(),
+          ),
+        ),
+        // ── Greenhouse list ──────────────────────────────────────────────────
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () =>
+                ref.read(greenhouseNotifierProvider.notifier).silentRefresh(),
+            child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16.0),
       itemCount: greenhouses.isEmpty ? 2 : greenhouses.length + 1,
       itemBuilder: (context, index) {
         if (greenhouses.isEmpty && index == 0) {
@@ -122,7 +141,11 @@ class ControlsView extends ConsumerWidget {
           ),
         );
       },
-    );
+      ),        // ListView.builder
+          ),    // RefreshIndicator
+        ),      // Expanded
+      ],
+    );          // Column
   }
 
   // ─── Add child ───────────────────────────────────────────────────────────────

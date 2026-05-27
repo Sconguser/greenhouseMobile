@@ -17,7 +17,7 @@ class ParameterList extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ...parameters.map((parameter) => Text(
-                "${parameter.name}: ${parameter.currentValue} ${parameter.unit}"))
+                "${parameter.name}: ${parameter.currentValue ?? '—'} ${parameter.unit ?? ''}"))
           ],
         ),
       ],

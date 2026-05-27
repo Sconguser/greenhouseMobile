@@ -42,6 +42,10 @@ class _ScaffoldWithNavState extends ConsumerState<ScaffoldWithNav> {
           label: S.current.bottomNavBarControls,
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.bar_chart),
+          label: S.current.bottomNavBarAnalytics,
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.local_florist),
           label: S.current.drawerPlants,
         ),
@@ -58,10 +62,9 @@ class _ScaffoldWithNavState extends ConsumerState<ScaffoldWithNav> {
       child: ListView(
         children: [
           _buildDrawerItem(0, Icons.home, S.current.bottomNavBarControls, ref),
-          _buildDrawerItem(
-              1, Icons.local_florist, S.current.drawerPlants, ref),
-          _buildDrawerItem(
-              2, Icons.settings, S.current.bottomNavBarSettings, ref),
+          _buildDrawerItem(1, Icons.bar_chart, S.current.bottomNavBarAnalytics, ref),
+          _buildDrawerItem(2, Icons.local_florist, S.current.drawerPlants, ref),
+          _buildDrawerItem(3, Icons.settings, S.current.bottomNavBarSettings, ref),
         ],
       ),
     );

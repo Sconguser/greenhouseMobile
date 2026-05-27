@@ -56,20 +56,9 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
     }
   }
 
-  Future<List<Greenhouse>> _loadGreenhouses() async {
-    state = AsyncValue.loading();
-    try {
-      return await _fetchGreenhouses();
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-      rethrow;
-    }
-  }
-
   // ─── Greenhouse CRUD ────────────────────────────────────────────────────────
 
   Future<void> addNewGreenhouse(Greenhouse greenhouse) async {
-    state = AsyncValue.loading();
     try {
       final response = await ref.read(httpServiceProvider).request(
             method: HttpMethod.post,
@@ -77,7 +66,7 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
             body: greenhouse.toJson(),
           );
       if (response.statusCode == 200) {
-        state = AsyncValue.data(await _loadGreenhouses());
+        state = AsyncValue.data(await _fetchGreenhouses());
       } else {
         throw Exception('Failed to add greenhouse');
       }
@@ -88,8 +77,6 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   }
 
   Future<void> editGreenhouse(Greenhouse greenhouse, int greenhouseId) async {
-    List<Greenhouse>? previous = _currentList;
-    state = AsyncValue.loading();
     try {
       final response = await ref.read(httpServiceProvider).request(
             method: HttpMethod.patch,
@@ -100,13 +87,14 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
         final utf8Body = utf8.decode(response.bodyBytes);
         final edited =
             Greenhouse.fromJson(jsonDecode(utf8Body) as Map<String, dynamic>);
-        if (previous != null) {
+        final current = state.valueOrNull;
+        if (current != null) {
           state = AsyncValue.data([
-            ...previous.where((g) => g.id != greenhouseId),
+            ...current.where((g) => g.id != greenhouseId),
             edited,
           ]);
         } else {
-          state = AsyncValue.data(await _loadGreenhouses());
+          state = AsyncValue.data(await _fetchGreenhouses());
         }
       }
     } catch (e, st) {
@@ -116,13 +104,12 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   }
 
   Future<void> deleteGreenhouse(int greenhouseId) async {
-    state = AsyncValue.loading();
     try {
       await ref.read(httpServiceProvider).request(
             method: HttpMethod.delete,
             endpoint: '/greenhouse/$greenhouseId',
           );
-      state = AsyncValue.data(await _loadGreenhouses());
+      state = AsyncValue.data(await _fetchGreenhouses());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -140,7 +127,6 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   // ─── Zone CRUD ───────────────────────────────────────────────────────────────
 
   Future<void> addNewZoneToGreenhouse(Zone zone, int greenhouseId) async {
-    state = AsyncValue.loading();
     try {
       final zoneResponse = await ref.read(httpServiceProvider).request(
             method: HttpMethod.post,
@@ -163,7 +149,7 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
               );
         }
       }
-      state = AsyncValue.data(await _loadGreenhouses());
+      state = AsyncValue.data(await _fetchGreenhouses());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -171,13 +157,12 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   }
 
   Future<void> deleteZone(int greenhouseId, int zoneId) async {
-    state = AsyncValue.loading();
     try {
       await ref.read(httpServiceProvider).request(
             method: HttpMethod.delete,
             endpoint: '/greenhouse/$greenhouseId/deleteZone/$zoneId',
           );
-      state = AsyncValue.data(await _loadGreenhouses());
+      state = AsyncValue.data(await _fetchGreenhouses());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -185,14 +170,13 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   }
 
   Future<void> editZone(String name, int zoneId) async {
-    state = AsyncValue.loading();
     try {
       await ref.read(httpServiceProvider).request(
             method: HttpMethod.patch,
             endpoint: '/zone/$zoneId',
             body: {'name': name},
           );
-      state = AsyncValue.data(await _loadGreenhouses());
+      state = AsyncValue.data(await _fetchGreenhouses());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -202,7 +186,6 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   // ─── Flowerpot CRUD ──────────────────────────────────────────────────────────
 
   Future<void> addNewFlowerpotToZone(Flowerpot flowerpot, int zoneId) async {
-    state = AsyncValue.loading();
     try {
       final potResponse = await ref.read(httpServiceProvider).request(
             method: HttpMethod.post,
@@ -225,7 +208,7 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
               );
         }
       }
-      state = AsyncValue.data(await _loadGreenhouses());
+      state = AsyncValue.data(await _fetchGreenhouses());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -233,14 +216,13 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   }
 
   Future<void> editFlowerpot(String name, int flowerpotId) async {
-    state = AsyncValue.loading();
     try {
       await ref.read(httpServiceProvider).request(
             method: HttpMethod.patch,
             endpoint: '/flowerpot/$flowerpotId',
             body: {'name': name},
           );
-      state = AsyncValue.data(await _loadGreenhouses());
+      state = AsyncValue.data(await _fetchGreenhouses());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -248,13 +230,12 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   }
 
   Future<void> deleteFlowerpot(int zoneId, int flowerpotId) async {
-    state = AsyncValue.loading();
     try {
       await ref.read(httpServiceProvider).request(
             method: HttpMethod.delete,
             endpoint: '/zone/$zoneId/deleteFlowerpot/$flowerpotId',
           );
-      state = AsyncValue.data(await _loadGreenhouses());
+      state = AsyncValue.data(await _fetchGreenhouses());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -264,14 +245,13 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   // ─── Plant ───────────────────────────────────────────────────────────────────
 
   Future<void> addNewPlantToFlowerpot(int plantId, int flowerpotId) async {
-    state = AsyncValue.loading();
     try {
       final response = await ref.read(httpServiceProvider).request(
             method: HttpMethod.put,
             endpoint: '/flowerpot/$flowerpotId/addPlant/$plantId',
           );
       if (response.statusCode == 200) {
-        state = AsyncValue.data(await _loadGreenhouses());
+        state = AsyncValue.data(await _fetchGreenhouses());
       } else {
         throw Exception('Failed to add plant to flowerpot');
       }
@@ -282,13 +262,12 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   }
 
   Future<void> removePlantFromFlowerpot(int flowerpotId, int plantId) async {
-    state = AsyncValue.loading();
     try {
       await ref.read(httpServiceProvider).request(
             method: HttpMethod.delete,
             endpoint: '/flowerpot/$flowerpotId/deletePlant/$plantId',
           );
-      state = AsyncValue.data(await _loadGreenhouses());
+      state = AsyncValue.data(await _fetchGreenhouses());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -298,7 +277,6 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   // ─── Parameters ──────────────────────────────────────────────────────────────
 
   Future<void> updateParameters(List<Parameter> parameters) async {
-    state = AsyncValue.loading();
     try {
       final response = await ref.read(httpServiceProvider).request(
             method: HttpMethod.patch,
@@ -306,7 +284,7 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
             body: parameters.map((p) => p.toJson()).toList(),
           );
       if (response.statusCode == 200) {
-        state = AsyncValue.data(await _loadGreenhouses());
+        state = AsyncValue.data(await _fetchGreenhouses());
       } else {
         throw Exception('Failed to update parameters');
       }
@@ -318,14 +296,13 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
 
   Future<void> addParameterToGreenhouse(
       Parameter parameter, int greenhouseId) async {
-    state = AsyncValue.loading();
     try {
       await ref.read(httpServiceProvider).request(
             method: HttpMethod.post,
             endpoint: '/greenhouse/$greenhouseId/addParameter',
             body: parameter.toJson(),
           );
-      state = AsyncValue.data(await _loadGreenhouses());
+      state = AsyncValue.data(await _fetchGreenhouses());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -333,14 +310,13 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   }
 
   Future<void> addParameterToZone(Parameter parameter, int zoneId) async {
-    state = AsyncValue.loading();
     try {
       await ref.read(httpServiceProvider).request(
             method: HttpMethod.post,
             endpoint: '/zone/$zoneId/addParameter',
             body: parameter.toJson(),
           );
-      state = AsyncValue.data(await _loadGreenhouses());
+      state = AsyncValue.data(await _fetchGreenhouses());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -349,14 +325,13 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
 
   Future<void> addParameterToFlowerpot(
       Parameter parameter, int flowerpotId) async {
-    state = AsyncValue.loading();
     try {
       await ref.read(httpServiceProvider).request(
             method: HttpMethod.post,
             endpoint: '/flowerpot/$flowerpotId/addParameter',
             body: parameter.toJson(),
           );
-      state = AsyncValue.data(await _loadGreenhouses());
+      state = AsyncValue.data(await _fetchGreenhouses());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -364,13 +339,12 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   }
 
   Future<void> deleteParameter(int parameterId) async {
-    state = AsyncValue.loading();
     try {
       await ref.read(httpServiceProvider).request(
             method: HttpMethod.delete,
             endpoint: '/parameter/$parameterId',
           );
-      state = AsyncValue.data(await _loadGreenhouses());
+      state = AsyncValue.data(await _fetchGreenhouses());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;

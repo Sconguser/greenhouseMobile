@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/flowerpot_model.dart';
 import '../models/greenhouse_model.dart';
+import '../models/greenhouse_status_model.dart';
 import '../models/parameter_model.dart';
 import '../models/zone_model.dart';
 import 'http_conf.dart';
@@ -17,10 +18,7 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   @override
   Future<List<Greenhouse>> build() async {
     final greenhouses = await _fetchGreenhouses();
-    if (greenhouses.any(_hasPendingSync)) {
-      final timer = Timer(const Duration(seconds: 5), () => silentRefresh());
-      ref.onDispose(timer.cancel);
-    }
+    _scheduleNextPoll(greenhouses);
     return greenhouses;
   }
 
@@ -28,6 +26,20 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
       gh.deviceConfigSynced == false ||
       gh.mappingConfigSynced == false ||
       gh.modelSynced == false;
+
+  static bool _shouldAutoPoll(Greenhouse gh) =>
+      _hasPendingSync(gh) || gh.status == Status.ON;
+
+  void _scheduleNextPoll(List<Greenhouse> greenhouses) {
+    final hasPendingSync = greenhouses.any(_hasPendingSync);
+    final hasLiveBoard = greenhouses.any((gh) => gh.status == Status.ON);
+    if (!hasPendingSync && !hasLiveBoard) return;
+    final interval = hasPendingSync
+        ? const Duration(seconds: 5)
+        : const Duration(seconds: 10);
+    final timer = Timer(interval, () => silentRefresh());
+    ref.onDispose(timer.cancel);
+  }
 
   // Fetches without touching state — used by both initial load and silent refresh.
   Future<List<Greenhouse>> _fetchGreenhouses() async {
@@ -47,10 +59,7 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
     try {
       final updated = await _fetchGreenhouses();
       state = AsyncValue.data(updated);
-      if (updated.any(_hasPendingSync)) {
-        final timer = Timer(const Duration(seconds: 5), () => silentRefresh());
-        ref.onDispose(timer.cancel);
-      }
+      _scheduleNextPoll(updated);
     } catch (_) {
       // Don't break the existing view on a background refresh failure.
     }
@@ -117,10 +126,13 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
   }
 
   Future<void> pushModelToGreenhouse(int greenhouseId) async {
-    await ref.read(httpServiceProvider).request(
+    final response = await ref.read(httpServiceProvider).request(
           method: HttpMethod.post,
           endpoint: '/greenhouse/$greenhouseId/push',
         );
+    if (response.statusCode != 200) {
+      throw Exception(utf8.decode(response.bodyBytes));
+    }
     await silentRefresh();
   }
 

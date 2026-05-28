@@ -319,12 +319,23 @@ class ControlsView extends ConsumerWidget {
           ),
           TextButton(
             child: Text(s.push),
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(dialogCtx).pop();
               if (greenhouse.id != null) {
-                ref
-                    .read(greenhouseNotifierProvider.notifier)
-                    .pushModelToGreenhouse(greenhouse.id!);
+                try {
+                  await ref
+                      .read(greenhouseNotifierProvider.notifier)
+                      .pushModelToGreenhouse(greenhouse.id!);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(s.pushFailed),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               }
             },
           ),
@@ -395,11 +406,11 @@ class ControlsView extends ConsumerWidget {
     }
 
     bool isValueChanged(Parameter p) {
-      final updatedAt = p.updatedAt;
-      if (updatedAt == null) return false;
+      final requestedValueUpdatedAt = p.requestedValueUpdatedAt;
+      if (requestedValueUpdatedAt == null) return false;
       if (isNew(p.createdAt)) return false;
       if (lastPushed == null) return true;
-      return updatedAt.isAfter(lastPushed);
+      return requestedValueUpdatedAt.isAfter(lastPushed);
     }
 
     if (gh.modelDirtyAt != null &&

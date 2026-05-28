@@ -16,6 +16,7 @@ abstract class Parameter with _$Parameter implements EntityMarker {
     required String name,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? requestedValueUpdatedAt,
     required bool mutable,
     double? currentValue,
     double? requestedValue,

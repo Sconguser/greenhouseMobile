@@ -161,13 +161,20 @@ class _DeviceConfigListState extends ConsumerState<_DeviceConfigList> {
               onPressed: () => Navigator.of(dialogCtx).pop()),
           ElevatedButton(
             child: Text(s.saveAndPush),
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(dialogCtx).pop();
-              ref
+              // Adopt the server response so local state carries the assigned
+              // ids; otherwise mappings built next would reference id-less
+              // devices and silently fail to bind on the board.
+              final saved = await ref
                   .read(deviceConfigNotifierProvider(widget.greenhouse.id!)
                       .notifier)
                   .saveDeviceConfig(_devices);
-              setState(() => _isDirty = false);
+              if (!mounted) return;
+              setState(() {
+                _devices = saved;
+                _isDirty = false;
+              });
             },
           ),
         ],

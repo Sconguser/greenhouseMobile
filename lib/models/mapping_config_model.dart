@@ -11,15 +11,14 @@ abstract class MappingConfig with _$MappingConfig {
     int? flowerpotId,
     required String paramName,
 
-    // Read (sensor) configuration
-    String? readDriver,           // "digital", "dht22", "muxAnalog"
-    int? readPin,
+    // Read (sensor) configuration — references a device by its server-assigned
+    // id; driver/pin live on the device inventory, the board resolves them.
+    int? readDeviceId,
     int? muxChannel,
     @Default([]) List<int> muxSelPins,
 
-    // Write (actuator) configuration
-    String? writeDriver,          // "digital"
-    int? writePin,
+    // Write (actuator) configuration — references a device by its id.
+    int? writeDeviceId,
     String? direction,            // "increase", "decrease"
     double? hysteresis,
     bool? activeLow,

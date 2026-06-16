@@ -29,16 +29,26 @@ class DeviceConfigNotifier extends _$DeviceConfigNotifier {
         .toList();
   }
 
-  Future<void> saveDeviceConfig(List<DeviceConfig> configs) async {
-    state = AsyncValue.loading();
+  /// Saves the devices and adopts the server's response, which carries the
+  /// server-assigned ids. Returns the id-stamped list so callers can update
+  /// their local copy and immediately reference devices by id (e.g. when
+  /// building mappings) — the app never holds an id-less device state.
+  Future<List<DeviceConfig>> saveDeviceConfig(List<DeviceConfig> configs) async {
+    state = const AsyncValue.loading();
     try {
-      await ref.read(httpServiceProvider).request(
+      final response = await ref.read(httpServiceProvider).request(
             method: HttpMethod.post,
             endpoint: '/greenhouse/$greenhouseId/config/devices',
             body: configs.map((c) => c.toJson()).toList(),
           );
-      state = AsyncValue.data(configs);
+      final utf8Body = utf8.decode(response.bodyBytes);
+      final List<dynamic> decoded = jsonDecode(utf8Body);
+      final saved = decoded
+          .map((e) => DeviceConfig.fromJson(e as Map<String, dynamic>))
+          .toList();
+      state = AsyncValue.data(saved);
       unawaited(ref.read(greenhouseNotifierProvider.notifier).silentRefresh());
+      return saved;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;

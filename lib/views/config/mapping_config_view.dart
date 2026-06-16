@@ -234,9 +234,9 @@ class _MappingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scopeLabel = _scopeLabel();
-    final readLabel = _deviceLabel(mapping.readDriver, mapping.readPin, 'read');
-    final writeLabel = mapping.writeDriver != null
-        ? '${_deviceLabel(mapping.writeDriver, mapping.writePin, 'write')} (${mapping.direction})'
+    final readLabel = _deviceLabel(mapping.readDeviceId, 'read');
+    final writeLabel = mapping.writeDeviceId != null
+        ? '${_deviceLabel(mapping.writeDeviceId, 'write')} (${mapping.direction})'
         : null;
 
     return Card(
@@ -277,13 +277,12 @@ class _MappingCard extends StatelessWidget {
     }
   }
 
-  String? _deviceLabel(String? driver, int? pin, String prefix) {
-    if (driver == null) return null;
-    final device =
-        _firstOrNull(devices, (d) => d.driver == driver && d.pin == pin);
+  String? _deviceLabel(int? deviceId, String prefix) {
+    if (deviceId == null) return null;
+    final device = _firstOrNull(devices, (d) => d.id == deviceId);
     return device != null
-        ? '$prefix: ${device.name}'
-        : '$prefix: $driver pin $pin';
+        ? '$prefix: ${device.name} (${device.driver}, pin ${device.pin})'
+        : '$prefix: device #$deviceId (missing)';
   }
 }
 
@@ -318,14 +317,14 @@ class _MappingFormPageState extends State<_MappingFormPage> {
 
   // Read sensor
   bool _hasRead = false;
-  String? _selectedReadDeviceName;
+  int? _selectedReadDeviceId;
 
   // Analog scaling
   bool _hasScaling = false;
 
   // Write actuator
   bool _hasWrite = false;
-  String? _selectedWriteDeviceName;
+  int? _selectedWriteDeviceId;
 
   static const _directions = ['increase', 'decrease'];
   static const _outputModes = ['binary', 'pwm'];
@@ -341,21 +340,13 @@ class _MappingFormPageState extends State<_MappingFormPage> {
     _selectedFlowerpotId = m.flowerpotId;
     _selectedParamName = m.paramName;
 
-    _hasRead = m.readDriver != null;
-    if (_hasRead) {
-      final dev = _firstOrNull(
-          widget.devices, (d) => d.driver == m.readDriver && d.pin == m.readPin);
-      _selectedReadDeviceName = dev?.name;
-    }
+    _hasRead = m.readDeviceId != null;
+    _selectedReadDeviceId = m.readDeviceId;
 
     _hasScaling = m.mapInMin != null;
 
-    _hasWrite = m.writeDriver != null;
-    if (_hasWrite) {
-      final dev = _firstOrNull(widget.devices,
-          (d) => d.driver == m.writeDriver && d.pin == m.writePin);
-      _selectedWriteDeviceName = dev?.name;
-    }
+    _hasWrite = m.writeDeviceId != null;
+    _selectedWriteDeviceId = m.writeDeviceId;
   }
 
   Zone? get _selectedZone => _firstOrNull(
@@ -379,7 +370,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
   }
 
   DeviceConfig? get _selectedReadDevice =>
-      _firstOrNull(widget.devices, (d) => d.name == _selectedReadDeviceName);
+      _firstOrNull(widget.devices, (d) => d.id == _selectedReadDeviceId);
 
   bool get _readIsMux => _selectedReadDevice?.driver == 'muxAnalog';
 
@@ -478,7 +469,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 title: Text(s.hasReadSensor),
                 onChanged: (v) => setState(() {
                   _hasRead = v;
-                  if (!v) _selectedReadDeviceName = null;
+                  if (!v) _selectedReadDeviceId = null;
                 }),
               ),
               if (_hasRead) ...[
@@ -490,20 +481,21 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                             color: Theme.of(context).colorScheme.error)),
                   )
                 else ...[
-                  DropdownButtonFormField<String?>(
-                    value: _selectedReadDeviceName,
+                  DropdownButtonFormField<int>(
+                    value: _selectedReadDeviceId,
                     decoration: InputDecoration(
                         labelText: s.selectReadDevice,
                         border: const OutlineInputBorder()),
                     items: widget.devices
+                        .where((d) => d.id != null)
                         .map((d) => DropdownMenuItem(
-                              value: d.name,
+                              value: d.id,
                               child:
                                   Text('${d.name} (${d.driver}, pin ${d.pin})'),
                             ))
                         .toList(),
                     onChanged: (v) =>
-                        setState(() => _selectedReadDeviceName = v),
+                        setState(() => _selectedReadDeviceId = v),
                   ),
                   if (_readIsMux) ...[
                     const SizedBox(height: 8),
@@ -544,7 +536,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 title: Text(s.hasWriteActuator),
                 onChanged: (v) => setState(() {
                   _hasWrite = v;
-                  if (!v) _selectedWriteDeviceName = null;
+                  if (!v) _selectedWriteDeviceId = null;
                 }),
               ),
               if (_hasWrite) ...[
@@ -556,19 +548,20 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                             color: Theme.of(context).colorScheme.error)),
                   )
                 else
-                  DropdownButtonFormField<String?>(
-                    value: _selectedWriteDeviceName,
+                  DropdownButtonFormField<int>(
+                    value: _selectedWriteDeviceId,
                     decoration: InputDecoration(
                         labelText: s.selectWriteDevice,
                         border: const OutlineInputBorder()),
                     items: _writableDevices
+                        .where((d) => d.id != null)
                         .map((d) => DropdownMenuItem(
-                              value: d.name,
+                              value: d.id,
                               child: Text('${d.name} (pin ${d.pin})'),
                             ))
                         .toList(),
                     onChanged: (v) =>
-                        setState(() => _selectedWriteDeviceName = v),
+                        setState(() => _selectedWriteDeviceId = v),
                   ),
                 const SizedBox(height: 8),
                 FormBuilderDropdown<String>(
@@ -791,12 +784,6 @@ class _MappingFormPageState extends State<_MappingFormPage> {
       return (v == null || v.isEmpty) ? null : v;
     }
 
-    final readDevice = _hasRead ? _selectedReadDevice : null;
-    final writeDevice = _hasWrite
-        ? _firstOrNull(
-            widget.devices, (d) => d.name == _selectedWriteDeviceName)
-        : null;
-
     final selPinsRaw = raw('muxSelPins');
     final muxSelPins = selPinsRaw != null
         ? selPinsRaw
@@ -813,12 +800,10 @@ class _MappingFormPageState extends State<_MappingFormPage> {
       zoneId: _selectedZoneId,
       flowerpotId: _selectedFlowerpotId,
       paramName: _selectedParamName!,
-      readDriver: readDevice?.driver,
-      readPin: readDevice?.pin,
+      readDeviceId: _hasRead ? _selectedReadDeviceId : null,
       muxChannel: useMux ? int.tryParse(raw('muxChannel') ?? '') : null,
       muxSelPins: useMux ? muxSelPins : [],
-      writeDriver: writeDevice?.driver,
-      writePin: writeDevice?.pin,
+      writeDeviceId: _hasWrite ? _selectedWriteDeviceId : null,
       direction: _hasWrite ? f['direction']?.value as String? : null,
       hysteresis:
           _hasWrite ? double.tryParse(raw('hysteresis') ?? '') : null,

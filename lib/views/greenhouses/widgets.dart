@@ -94,7 +94,7 @@ class EntityTile extends ConsumerWidget {
     final greenhouse = isGreenhouse ? entity as Greenhouse : null;
 
     return Card(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       elevation: elevation,
       margin: const EdgeInsets.all(8.0),
       child: ExpansionTile(
@@ -373,8 +373,26 @@ class _ParametersControlPanelState
   void didUpdateWidget(ParametersControlPanel old) {
     super.didUpdateWidget(old);
     if (old.parameters != widget.parameters) {
-      _temp = _sorted(widget.parameters);
-      _changed.clear();
+      final refreshed = _sorted(widget.parameters);
+      // Preserve the user's in-progress edits across polling refreshes:
+      // adopt the server's fresh currentValue for display, but keep any
+      // pending requestedValue the user is still editing (tracked in
+      // _changed). Otherwise a poll would snap the slider back before the
+      // change can be confirmed.
+      for (var i = 0; i < refreshed.length; i++) {
+        final idx = _changed.indexWhere((c) => c.id == refreshed[i].id);
+        if (idx != -1) {
+          refreshed[i] = refreshed[i]
+              .copyWith(requestedValue: _changed[idx].requestedValue);
+        }
+      }
+      _temp = refreshed;
+      // Re-point _changed at the refreshed objects so a later confirm sends
+      // the merged values; drop any pending edits whose parameter is gone.
+      final pendingIds = _changed.map((p) => p.id).toSet();
+      _changed
+        ..clear()
+        ..addAll(_temp.where((p) => pendingIds.contains(p.id)));
     }
   }
 
@@ -1285,11 +1303,11 @@ class AddNewGreenhouseButton extends ConsumerWidget {
         constraints: BoxConstraints(minHeight: height * 0.09),
         margin: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: const BorderRadius.all(Radius.circular(10)),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.5),
+              color: cardShadowColor(context),
               spreadRadius: 5,
               blurRadius: 7,
               offset: const Offset(0, 3),

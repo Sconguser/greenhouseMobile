@@ -110,11 +110,11 @@ class ControlsView extends ConsumerWidget {
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: const BorderRadius.all(Radius.circular(10)),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withValues(alpha: 0.5),
+                color: cardShadowColor(context),
                 spreadRadius: 5,
                 blurRadius: 7,
                 offset: const Offset(0, 3),

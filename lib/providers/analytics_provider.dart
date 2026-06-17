@@ -73,6 +73,26 @@ Future<List<GreenhouseEvent>> greenhouseEvents(
       .toList();
 }
 
+// ─── Device logs (serial-monitor feed) ────────────────────────────────────────
+
+@riverpod
+Future<List<DeviceLog>> deviceLogs(
+  DeviceLogsRef ref, {
+  required int greenhouseId,
+  int limit = 200,
+}) async {
+  final response = await ref.read(httpServiceProvider).request(
+        method: HttpMethod.get,
+        endpoint: '/analytics/greenhouse/$greenhouseId/logs',
+        queryParams: {'limit': limit.toString()},
+      );
+  final utf8Body = utf8.decode(response.bodyBytes);
+  final List<dynamic> decoded = jsonDecode(utf8Body);
+  return decoded
+      .map((e) => DeviceLog.fromJson(e as Map<String, dynamic>))
+      .toList();
+}
+
 // ─── Greenhouse stats ─────────────────────────────────────────────────────────
 
 @riverpod

@@ -19,6 +19,25 @@ abstract class GreenhouseEvent with _$GreenhouseEvent {
       _$GreenhouseEventFromJson(json);
 }
 
+// ─── Device log line (serial-monitor feed) ────────────────────────────────────
+
+@freezed
+abstract class DeviceLog with _$DeviceLog {
+  const factory DeviceLog({
+    required int id,
+    required String source, // "DEVICE" | "EVENT"
+    required String level, // "INFO" | "WARN" | "ERROR"
+    String? code,
+    String? message,
+    int? freeHeap,
+    int? deviceUptime,
+    required DateTime timestamp,
+  }) = _DeviceLog;
+
+  factory DeviceLog.fromJson(Map<String, dynamic> json) =>
+      _$DeviceLogFromJson(json);
+}
+
 // ─── Aggregate stats ──────────────────────────────────────────────────────────
 
 @freezed
@@ -69,6 +88,7 @@ abstract class AnalyticsSettings with _$AnalyticsSettings {
     @Default(true) bool analyticsEnabled,
     @Default(90) int historyRetentionDays,
     @Default(365) int eventsRetentionDays,
+    @Default(7) int logsRetentionDays,
     @Default(24) int cleanupIntervalHours,
     DateTime? lastCleanup,
   }) = _AnalyticsSettings;

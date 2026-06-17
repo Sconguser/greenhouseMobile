@@ -7,11 +7,15 @@ import 'package:intl/intl.dart';
 
 import '../../models/analytics_model.dart';
 import '../../models/flowerpot_model.dart';
+import '../../models/plant_alert_model.dart';
 import '../../models/greenhouse_model.dart';
 import '../../models/parameter_model.dart';
 import '../../models/zone_model.dart';
+import '../../generated/l10n.dart';
 import '../../providers/analytics_provider.dart';
+import '../../providers/analytics_target_provider.dart';
 import '../../providers/greenhouse_notifier.dart';
+import '../../providers/plant_alert_provider.dart';
 
 // ─── Colour palette for multi-line charts ─────────────────────────────────────
 
@@ -27,6 +31,15 @@ const _chartColors = [
 ];
 
 Color _colorFor(int index) => _chartColors[index % _chartColors.length];
+
+String _rangeLabel(BuildContext context, AnalyticsRange r) {
+  final s = S.of(context);
+  return switch (r) {
+    AnalyticsRange.last24h => s.analyticsRangeLast24h,
+    AnalyticsRange.last7d => s.analyticsRangeLast7d,
+    AnalyticsRange.last30d => s.analyticsRangeLast30d,
+  };
+}
 
 // ─── Top-level view ───────────────────────────────────────────────────────────
 
@@ -51,7 +64,7 @@ class _AnalyticsViewState extends ConsumerState<AnalyticsView>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, vsync: this);
+    _tabs = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -116,9 +129,23 @@ class _AnalyticsViewState extends ConsumerState<AnalyticsView>
   Widget build(BuildContext context) {
     final ghAsync = ref.watch(greenhouseNotifierProvider);
 
+    // Honour a deep-link request (e.g. from the plant-alert badge "View all"):
+    // select the requested greenhouse + tab, then clear the one-shot target.
+    final target = ref.watch(analyticsTargetProvider);
+    if (target != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() => _selectedGreenhouseId = target.greenhouseId);
+        if (target.tabIndex >= 0 && target.tabIndex < _tabs.length) {
+          _tabs.animateTo(target.tabIndex);
+        }
+        ref.read(analyticsTargetProvider.notifier).clear();
+      });
+    }
+
     return ghAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(S.of(context).error(e))),
       data: (greenhouses) {
         // Auto-select the first greenhouse on initial load
         if (_selectedGreenhouseId == null && greenhouses.isNotEmpty) {
@@ -164,7 +191,7 @@ class _AnalyticsViewState extends ConsumerState<AnalyticsView>
               onChanged: (r) => setState(() => _range = r),
               onRefresh: _refresh,
             ),
-            _buildTabBar(),
+            _buildTabBar(context),
             Expanded(
               child: TabBarView(
                 controller: _tabs,
@@ -183,6 +210,7 @@ class _AnalyticsViewState extends ConsumerState<AnalyticsView>
                     analyticsEnabled: analyticsEnabled,
                   ),
                   _LogsTab(greenhouseId: _selectedGreenhouseId),
+                  _PlantHealthTab(greenhouseId: _selectedGreenhouseId),
                   const _SettingsTab(),
                 ],
               ),
@@ -193,16 +221,20 @@ class _AnalyticsViewState extends ConsumerState<AnalyticsView>
     );
   }
 
-  Widget _buildTabBar() => TabBar(
-        controller: _tabs,
-        isScrollable: true,
-        tabs: const [
-          Tab(icon: Icon(Icons.show_chart), text: 'Parameters'),
-          Tab(icon: Icon(Icons.history), text: 'Events'),
-          Tab(icon: Icon(Icons.terminal), text: 'Logs'),
-          Tab(icon: Icon(Icons.settings), text: 'Settings'),
-        ],
-      );
+  Widget _buildTabBar(BuildContext context) {
+    final s = S.of(context);
+    return TabBar(
+      controller: _tabs,
+      isScrollable: true,
+      tabs: [
+        Tab(icon: const Icon(Icons.show_chart), text: s.analyticsTabParameters),
+        Tab(icon: const Icon(Icons.history), text: s.analyticsTabEvents),
+        Tab(icon: const Icon(Icons.terminal), text: s.analyticsTabLogs),
+        Tab(icon: const Icon(Icons.local_florist), text: s.analyticsTabPlants),
+        Tab(icon: const Icon(Icons.settings), text: s.analyticsTabSettings),
+      ],
+    );
+  }
 }
 
 // ─── Greenhouse selector ──────────────────────────────────────────────────────
@@ -221,17 +253,18 @@ class _GreenhouseSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (greenhouses.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16),
-        child: Text('No greenhouses configured.', style: TextStyle(color: Colors.grey)),
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(S.of(context).analyticsNoGreenhouses,
+            style: const TextStyle(color: Colors.grey)),
       );
     }
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: DropdownButtonFormField<int>(
-        decoration: const InputDecoration(
-          labelText: 'Greenhouse',
-          border: OutlineInputBorder(),
+        decoration: InputDecoration(
+          labelText: S.of(context).analyticsGreenhouse,
+          border: const OutlineInputBorder(),
           isDense: true,
         ),
         value: selectedId,
@@ -274,9 +307,9 @@ class _LevelAndEntitySelector extends StatelessWidget {
           Row(
             children: EntityLevel.values.map((l) {
               final label = switch (l) {
-                EntityLevel.greenhouse => 'Greenhouse',
-                EntityLevel.zone => 'Zone',
-                EntityLevel.flowerpot => 'Flowerpot',
+                EntityLevel.greenhouse => S.of(context).analyticsGreenhouse,
+                EntityLevel.zone => S.of(context).analyticsZone,
+                EntityLevel.flowerpot => S.of(context).analyticsFlowerpot,
               };
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -292,13 +325,13 @@ class _LevelAndEntitySelector extends StatelessWidget {
           if (level == EntityLevel.zone && zones.isNotEmpty) ...[
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
-              decoration: const InputDecoration(
-                labelText: 'Zone',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: S.of(context).analyticsZone,
+                border: const OutlineInputBorder(),
                 isDense: true,
               ),
               value: selectedEntityId,
-              hint: const Text('Select a zone'),
+              hint: Text(S.of(context).analyticsSelectZone),
               items: zones
                   .map((z) => DropdownMenuItem(value: z.id, child: Text(z.name)))
                   .toList(),
@@ -308,13 +341,13 @@ class _LevelAndEntitySelector extends StatelessWidget {
           if (level == EntityLevel.flowerpot && flowerpots.isNotEmpty) ...[
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
-              decoration: const InputDecoration(
-                labelText: 'Flowerpot',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: S.of(context).analyticsFlowerpot,
+                border: const OutlineInputBorder(),
                 isDense: true,
               ),
               value: selectedEntityId,
-              hint: const Text('Select a flowerpot'),
+              hint: Text(S.of(context).analyticsSelectFlowerpot),
               items: flowerpots
                   .map((fp) => DropdownMenuItem(value: fp.id, child: Text(fp.name)))
                   .toList(),
@@ -349,7 +382,7 @@ class _RangeChips extends StatelessWidget {
           ...AnalyticsRange.values.map((r) => Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ChoiceChip(
-                  label: Text(r.label),
+                  label: Text(_rangeLabel(context, r)),
                   selected: r == selected,
                   onSelected: (_) => onChanged(r),
                 ),
@@ -360,7 +393,7 @@ class _RangeChips extends StatelessWidget {
               onPressed: onRefresh,
               icon: const Icon(Icons.refresh),
               iconSize: 22,
-              tooltip: 'Refresh',
+              tooltip: S.of(context).analyticsRefresh,
               visualDensity: VisualDensity.compact,
             ),
         ],
@@ -394,13 +427,13 @@ class _ParametersTab extends StatelessWidget {
     if (!analyticsEnabled) return const _DisabledBanner();
 
     if (parameters.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Text(
-            'No parameters in this entity.\nSelect a different level or entity above.',
+            S.of(context).analyticsNoParameters,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
+            style: const TextStyle(color: Colors.grey),
           ),
         ),
       );
@@ -416,7 +449,7 @@ class _ParametersTab extends StatelessWidget {
             children: [
               // "All" toggle
               FilterChip(
-                label: const Text('All'),
+                label: Text(S.of(context).analyticsAll),
                 selected: _allSelected,
                 onSelected: (on) {
                   if (on) {
@@ -466,10 +499,10 @@ class _ParametersTab extends StatelessWidget {
         // ── Charts ───────────────────────────────────────────────────────────
         Expanded(
           child: selectedParamIds.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
-                    'Select one or more parameters above to view charts.',
-                    style: TextStyle(color: Colors.grey),
+                    S.of(context).analyticsSelectParameters,
+                    style: const TextStyle(color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
                 )
@@ -523,14 +556,14 @@ class _ParameterChartCard extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Error: $e',
+                  Text(S.of(context).error(e),
                       style: const TextStyle(color: Colors.red, fontSize: 12),
                       textAlign: TextAlign.center),
                   TextButton.icon(
                     onPressed: () => ref.invalidate(parameterHistoryProvider(
                         parameterId: parameterId, range: range)),
                     icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('Retry'),
+                    label: Text(S.of(context).retry),
                   ),
                 ],
               )),
@@ -551,9 +584,9 @@ class _ParameterChartCard extends ConsumerWidget {
           Text(title,
               style: TextStyle(fontWeight: FontWeight.w600, color: color)),
           const SizedBox(height: 24),
-          const Center(
-              child: Text('No data in the selected range.',
-                  style: TextStyle(color: Colors.grey))),
+          Center(
+              child: Text(S.of(context).analyticsNoDataInRange,
+                  style: const TextStyle(color: Colors.grey))),
           const SizedBox(height: 16),
         ],
       );
@@ -585,11 +618,11 @@ class _ParameterChartCard extends ConsumerWidget {
               child: Text(title,
                   style: TextStyle(fontWeight: FontWeight.w600, color: color)),
             ),
-            _MiniStat(label: 'min', value: minV, unit: unit, color: Colors.blueGrey),
+            _MiniStat(label: S.of(context).analyticsStatMin, value: minV, unit: unit, color: Colors.blueGrey),
             const SizedBox(width: 8),
-            _MiniStat(label: 'avg', value: avgV, unit: unit, color: Colors.green),
+            _MiniStat(label: S.of(context).analyticsStatAvg, value: avgV, unit: unit, color: Colors.green),
             const SizedBox(width: 8),
-            _MiniStat(label: 'max', value: maxV, unit: unit, color: Colors.orange),
+            _MiniStat(label: S.of(context).analyticsStatMax, value: maxV, unit: unit, color: Colors.orange),
           ],
         ),
         const SizedBox(height: 8),
@@ -694,11 +727,12 @@ class _EventsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!analyticsEnabled) return const _DisabledBanner();
+    final s = S.of(context);
 
     if (greenhouseId == null) {
-      return const Center(
-          child: Text('Select a greenhouse above.',
-              style: TextStyle(color: Colors.grey)));
+      return Center(
+          child: Text(s.plantAlertsSelectGreenhouse,
+              style: const TextStyle(color: Colors.grey)));
     }
 
     final statsAsync = ref.watch(
@@ -716,7 +750,7 @@ class _EventsTab extends ConsumerWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('Stats error: $e',
+                  child: Text(s.analyticsStatsError(e),
                       style:
                           const TextStyle(color: Colors.red, fontSize: 12)),
                 ),
@@ -724,12 +758,12 @@ class _EventsTab extends ConsumerWidget {
                   onPressed: () => ref.invalidate(greenhouseStatsProvider(
                       greenhouseId: greenhouseId!, range: range)),
                   icon: const Icon(Icons.refresh, size: 14),
-                  label: const Text('Retry'),
+                  label: Text(s.retry),
                 ),
               ],
             ),
           ),
-          data: (stats) => _buildStatsRow(stats),
+          data: (stats) => _buildStatsRow(context, stats),
         ),
         const Divider(height: 1),
         Expanded(
@@ -740,7 +774,7 @@ class _EventsTab extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Error: $e',
+                    Text(s.error(e),
                         style: const TextStyle(color: Colors.red)),
                     const SizedBox(height: 8),
                     ElevatedButton.icon(
@@ -748,7 +782,7 @@ class _EventsTab extends ConsumerWidget {
                           greenhouseEventsProvider(
                               greenhouseId: greenhouseId!, range: range)),
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
+                      label: Text(s.retry),
                     ),
                   ],
                 )),
@@ -760,7 +794,7 @@ class _EventsTab extends ConsumerWidget {
                         const Icon(Icons.check_circle_outline,
                             size: 48, color: Colors.green),
                         const SizedBox(height: 12),
-                        Text('No events in ${range.label}.',
+                        Text(s.analyticsNoEventsInRange(_rangeLabel(context, range)),
                             style: const TextStyle(color: Colors.grey)),
                       ],
                     ),
@@ -776,7 +810,8 @@ class _EventsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsRow(GreenhouseStats stats) {
+  Widget _buildStatsRow(BuildContext context, GreenhouseStats stats) {
+    final s = S.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -784,20 +819,20 @@ class _EventsTab extends ConsumerWidget {
         children: [
           _StatCard(
             icon: Icons.power_settings_new,
-            label: 'Boots',
+            label: s.analyticsStatBoots,
             value: stats.bootCount.toString(),
             color: Colors.green,
           ),
           _StatCard(
             icon: Icons.warning_amber_rounded,
-            label: 'Crashes',
+            label: s.analyticsStatCrashes,
             value: stats.crashCount.toString(),
             color: Colors.red,
           ),
           _StatCard(
             icon: Icons.calendar_today,
-            label: 'Period',
-            value: range.label,
+            label: s.analyticsStatPeriod,
+            value: _rangeLabel(context, range),
             color: Colors.blueGrey,
           ),
         ],
@@ -816,7 +851,9 @@ class _EventTile extends StatelessWidget {
     final isBoot = event.eventType == 'BOOT';
     final color = isBoot ? Colors.green : Colors.red;
     final icon = isBoot ? Icons.power_settings_new : Icons.warning_amber_rounded;
-    final label = isBoot ? 'Boot' : 'Crash';
+    final label = isBoot
+        ? S.of(context).analyticsEventBoot
+        : S.of(context).analyticsEventCrash;
     final timeStr =
         DateFormat('yyyy-MM-dd  HH:mm:ss').format(event.occurredAt.toLocal());
 
@@ -836,6 +873,163 @@ class _EventTile extends StatelessWidget {
                   const Icon(Icons.info_outline, size: 16, color: Colors.grey),
             )
           : null,
+    );
+  }
+}
+
+// ─── Plant health tab ──────────────────────────────────────────────────────────
+
+class _PlantHealthTab extends ConsumerStatefulWidget {
+  const _PlantHealthTab({required this.greenhouseId});
+
+  final int? greenhouseId;
+
+  @override
+  ConsumerState<_PlantHealthTab> createState() => _PlantHealthTabState();
+}
+
+class _PlantHealthTabState extends ConsumerState<_PlantHealthTab> {
+  bool _includeResolved = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final id = widget.greenhouseId;
+    if (id == null) {
+      return Center(
+          child: Text(s.plantAlertsSelectGreenhouse,
+              style: const TextStyle(color: Colors.grey)));
+    }
+
+    final alertsAsync = ref.watch(plantAlertsProvider(
+        greenhouseId: id, includeResolved: _includeResolved));
+
+    void refresh() {
+      ref.invalidate(plantAlertsProvider(
+          greenhouseId: id, includeResolved: _includeResolved));
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Row(
+            children: [
+              const Icon(Icons.local_florist, size: 18, color: Colors.green),
+              const SizedBox(width: 8),
+              Text(s.plantHealthTitle,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              const Spacer(),
+              Text(s.plantAlertsHistory, style: const TextStyle(fontSize: 12)),
+              Switch(
+                value: _includeResolved,
+                onChanged: (on) => setState(() => _includeResolved = on),
+              ),
+              IconButton(
+                onPressed: refresh,
+                icon: const Icon(Icons.refresh, size: 20),
+                tooltip: s.plantAlertsRefresh,
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: alertsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(s.error(e), style: const TextStyle(color: Colors.red)),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: refresh,
+                    icon: const Icon(Icons.refresh),
+                    label: Text(s.retry),
+                  ),
+                ],
+              ),
+            ),
+            data: (alerts) => alerts.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle_outline,
+                            size: 48, color: Colors.green),
+                        const SizedBox(height: 12),
+                        Text(
+                          _includeResolved
+                              ? s.plantAlertsEmptyAll
+                              : s.plantAlertsEmptyActive,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: () async => refresh(),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: alerts.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (ctx, i) => _PlantAlertTile(
+                        alert: alerts[i],
+                        greenhouseId: id,
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlantAlertTile extends ConsumerWidget {
+  const _PlantAlertTile({required this.alert, required this.greenhouseId});
+
+  final PlantAlert alert;
+  final int greenhouseId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(context);
+    final resolved = alert.isResolved;
+    final color = resolved ? Colors.green : Colors.red;
+    final icon = resolved ? Icons.check_circle_outline : Icons.warning_amber_rounded;
+    final ts = alert.raisedAt ?? alert.lastSeenAt ?? alert.firstDetectedAt;
+    final timeStr = ts != null
+        ? DateFormat('yyyy-MM-dd  HH:mm').format(ts.toLocal())
+        : '';
+
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: color.withValues(alpha: 0.15),
+        child: Icon(icon, color: color, size: 20),
+      ),
+      title: Text(
+        alert.message ??
+            s.plantAlertFallback(
+                alert.plantName ?? s.plantAlertGenericName,
+                alert.requirementName ?? ''),
+        style: const TextStyle(fontSize: 13),
+      ),
+      subtitle: Text(
+        '${resolved ? s.plantAlertStatusResolved : s.plantAlertStatusActive}'
+        '${timeStr.isNotEmpty ? '  ·  $timeStr' : ''}',
+        style: TextStyle(fontSize: 12, color: color),
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.close, size: 18),
+        tooltip: s.plantAlertsDismiss,
+        onPressed: () => ref.read(dismissPlantAlertProvider(
+          alertId: alert.id,
+          greenhouseId: greenhouseId,
+        ).future),
+      ),
     );
   }
 }
@@ -883,11 +1077,12 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     final id = widget.greenhouseId;
     if (id == null) {
-      return const Center(
-          child: Text('Select a greenhouse above.',
-              style: TextStyle(color: Colors.grey)));
+      return Center(
+          child: Text(s.plantAlertsSelectGreenhouse,
+              style: const TextStyle(color: Colors.grey)));
     }
 
     final logsAsync = ref.watch(deviceLogsProvider(greenhouseId: id));
@@ -901,10 +1096,10 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
             children: [
               const Icon(Icons.terminal, size: 18, color: Colors.grey),
               const SizedBox(width: 8),
-              const Text('Device logs',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              Text(s.analyticsDeviceLogs,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
               const Spacer(),
-              const Text('Auto', style: TextStyle(fontSize: 12)),
+              Text(s.analyticsAuto, style: const TextStyle(fontSize: 12)),
               Switch(
                 value: _autoRefresh,
                 onChanged: (on) {
@@ -916,7 +1111,7 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
               IconButton(
                 onPressed: _invalidate,
                 icon: const Icon(Icons.refresh, size: 20),
-                tooltip: 'Refresh now',
+                tooltip: s.analyticsRefreshNow,
                 visualDensity: VisualDensity.compact,
               ),
             ],
@@ -930,27 +1125,27 @@ class _LogsTabState extends ConsumerState<_LogsTab> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Error: $e',
+                  Text(s.error(e),
                       style: const TextStyle(color: Colors.red)),
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
                     onPressed: _invalidate,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
+                    label: Text(s.retry),
                   ),
                 ],
               ),
             ),
             data: (logs) => logs.isEmpty
-                ? const Center(
+                ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.inbox_outlined,
+                        const Icon(Icons.inbox_outlined,
                             size: 48, color: Colors.grey),
-                        SizedBox(height: 12),
-                        Text('No logs in the last 24 h.',
-                            style: TextStyle(color: Colors.grey)),
+                        const SizedBox(height: 12),
+                        Text(s.analyticsNoLogs,
+                            style: const TextStyle(color: Colors.grey)),
                       ],
                     ),
                   )
@@ -1038,8 +1233,11 @@ class _LogTile extends StatelessWidget {
                       style: const TextStyle(
                           fontSize: 13, fontFamily: 'monospace')),
                 if (log.freeHeap != null)
-                  Text('heap ${log.freeHeap} B'
-                      '${log.deviceUptime != null ? '  ·  up ${log.deviceUptime}s' : ''}',
+                  Text(
+                      S.of(context).analyticsLogHeap(log.freeHeap!) +
+                          (log.deviceUptime != null
+                              ? '  ·  ${S.of(context).analyticsLogUptime(log.deviceUptime!)}'
+                              : ''),
                       style: const TextStyle(fontSize: 10, color: Colors.grey)),
               ],
             ),
@@ -1064,20 +1262,27 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
   int? _historyDays;
   int? _eventsDays;
   int? _logsDays;
+  int? _debounceMin;
   int? _intervalHours;
 
   static const _historyOptions = [7, 30, 60, 90, 180, 365];
   static const _eventsOptions = [30, 90, 180, 365, 9999]; // 9999 = "Forever"
   static const _logsOptions = [1, 3, 7, 14, 30]; // days
+  static const _debounceOptions = [0, 5, 10, 20, 30, 60]; // minutes; 0 = immediate
   static const _intervalOptions = [1, 6, 12, 24, 48, 168]; // hours
 
-  String _eventsLabel(int v) => v == 9999 ? 'Forever' : '$v days';
-  String _intervalLabel(int v) {
-    if (v == 1) return '1 hour';
-    if (v < 24) return '$v hours';
-    if (v == 24) return '1 day';
-    if (v == 48) return '2 days';
-    return '${v ~/ 24} days';
+  String _debounceLabel(BuildContext context, int v) {
+    final s = S.of(context);
+    return v == 0 ? s.analyticsImmediate : s.analyticsMinutesLabel(v);
+  }
+
+  String _eventsLabel(BuildContext context, int v) => v == 9999
+      ? S.of(context).analyticsForever
+      : S.of(context).analyticsDaysLabel(v);
+
+  String _intervalLabel(BuildContext context, int v) {
+    final s = S.of(context);
+    return v < 24 ? s.analyticsHoursLabel(v) : s.analyticsDaysLabel(v ~/ 24);
   }
 
   @override
@@ -1088,13 +1293,15 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
     return settingsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
-          child: Text('Could not load settings: $e',
+          child: Text(S.of(context).analyticsSettingsLoadError(e),
               style: const TextStyle(color: Colors.red))),
       data: (settings) {
         // Initialise local state once from server values
         _historyDays ??= _nearestOption(settings.historyRetentionDays, _historyOptions);
         _eventsDays ??= _nearestOption(settings.eventsRetentionDays, _eventsOptions);
         _logsDays ??= _nearestOption(settings.logsRetentionDays, _logsOptions);
+        _debounceMin ??=
+            _nearestOption(settings.plantCheckDebounceMinutes, _debounceOptions);
         _intervalHours ??=
             _nearestOption(settings.cleanupIntervalHours, _intervalOptions);
 
@@ -1104,6 +1311,7 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
         final cardColor = (dark ? accent.shade900 : accent.shade50)
             .withValues(alpha: dark ? 0.30 : 1.0);
         final titleColor = dark ? accent.shade200 : accent.shade800;
+        final s = S.of(context);
 
         return ListView(
           padding: const EdgeInsets.all(16),
@@ -1118,15 +1326,15 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
                   color: accent,
                 ),
                 title: Text(
-                  enabled ? 'Analytics enabled' : 'Analytics disabled',
+                  enabled ? s.analyticsEnabledTitle : s.analyticsDisabledTitle,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: titleColor,
                   ),
                 ),
                 subtitle: Text(
-                  '${enabled ? 'Sensor readings and events are being recorded.' : 'No data is being recorded. Existing data is preserved.'}'
-                  '\nThis switch is saved automatically — no need to press Save.',
+                  '${enabled ? s.analyticsEnabledSubtitle : s.analyticsDisabledSubtitle}'
+                  '\n${s.analyticsAutoSaveHint}',
                   style: const TextStyle(fontSize: 12),
                 ),
                 isThreeLine: true,
@@ -1141,8 +1349,8 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(on
-                            ? 'Analytics enabled'
-                            : 'Analytics disabled'),
+                            ? s.analyticsEnabledTitle
+                            : s.analyticsDisabledTitle),
                         duration: const Duration(seconds: 2),
                       ),
                     );
@@ -1155,21 +1363,20 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
             // ── Parameter history retention ───────────────────────────────
             _SettingsCard(
               icon: Icons.show_chart,
-              title: 'Parameter history retention',
-              subtitle:
-                  'Delete sensor readings older than the selected period.',
+              title: s.analyticsHistoryRetentionTitle,
+              subtitle: s.analyticsHistoryRetentionSubtitle,
               child: DropdownButtonFormField<int>(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
                   isDense: true,
-                  labelText: 'Keep data for',
+                  labelText: s.analyticsKeepDataFor,
                 ),
                 menuMaxHeight: 220,
                 value: _historyDays,
                 items: _historyOptions
                     .map((v) => DropdownMenuItem(
                           value: v,
-                          child: Text('$v days'),
+                          child: Text(s.analyticsDaysLabel(v)),
                         ))
                     .toList(),
                 onChanged: (v) => setState(() => _historyDays = v),
@@ -1180,20 +1387,20 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
             // ── Event log retention ───────────────────────────────────────
             _SettingsCard(
               icon: Icons.history,
-              title: 'Event log retention',
-              subtitle: 'Delete boot / crash events older than the selected period.',
+              title: s.analyticsEventRetentionTitle,
+              subtitle: s.analyticsEventRetentionSubtitle,
               child: DropdownButtonFormField<int>(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
                   isDense: true,
-                  labelText: 'Keep events for',
+                  labelText: s.analyticsKeepEventsFor,
                 ),
                 menuMaxHeight: 220,
                 value: _eventsDays,
                 items: _eventsOptions
                     .map((v) => DropdownMenuItem(
                           value: v,
-                          child: Text(_eventsLabel(v)),
+                          child: Text(_eventsLabel(context, v)),
                         ))
                     .toList(),
                 onChanged: (v) => setState(() => _eventsDays = v),
@@ -1204,22 +1411,20 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
             // ── Device log retention ──────────────────────────────────────
             _SettingsCard(
               icon: Icons.terminal,
-              title: 'Device log retention',
-              subtitle:
-                  'Delete device logs older than the selected period. '
-                  'Logs are also capped at 1000 rows per greenhouse.',
+              title: s.analyticsLogRetentionTitle,
+              subtitle: s.analyticsLogRetentionSubtitle,
               child: DropdownButtonFormField<int>(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
                   isDense: true,
-                  labelText: 'Keep logs for',
+                  labelText: s.analyticsKeepLogsFor,
                 ),
                 menuMaxHeight: 220,
                 value: _logsDays,
                 items: _logsOptions
                     .map((v) => DropdownMenuItem(
                           value: v,
-                          child: Text(v == 1 ? '1 day' : '$v days'),
+                          child: Text(s.analyticsDaysLabel(v)),
                         ))
                     .toList(),
                 onChanged: (v) => setState(() => _logsDays = v),
@@ -1227,24 +1432,47 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
             ),
             const SizedBox(height: 12),
 
+            // ── Plant alert delay (debounce) ──────────────────────────────
+            _SettingsCard(
+              icon: Icons.local_florist,
+              title: s.analyticsPlantDelayTitle,
+              subtitle: s.analyticsPlantDelaySubtitle,
+              child: DropdownButtonFormField<int>(
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                  labelText: s.analyticsAlertAfter,
+                ),
+                menuMaxHeight: 220,
+                value: _debounceMin,
+                items: _debounceOptions
+                    .map((v) => DropdownMenuItem(
+                          value: v,
+                          child: Text(_debounceLabel(context, v)),
+                        ))
+                    .toList(),
+                onChanged: (v) => setState(() => _debounceMin = v),
+              ),
+            ),
+            const SizedBox(height: 12),
+
             // ── Cleanup interval ──────────────────────────────────────────
             _SettingsCard(
               icon: Icons.cleaning_services,
-              title: 'Cleanup interval',
-              subtitle:
-                  'How often the server should run the deletion job.',
+              title: s.analyticsCleanupIntervalTitle,
+              subtitle: s.analyticsCleanupIntervalSubtitle,
               child: DropdownButtonFormField<int>(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
                   isDense: true,
-                  labelText: 'Run every',
+                  labelText: s.analyticsRunEvery,
                 ),
                 menuMaxHeight: 220,
                 value: _intervalHours,
                 items: _intervalOptions
                     .map((v) => DropdownMenuItem(
                           value: v,
-                          child: Text(_intervalLabel(v)),
+                          child: Text(_intervalLabel(context, v)),
                         ))
                     .toList(),
                 onChanged: (v) => setState(() => _intervalHours = v),
@@ -1257,7 +1485,8 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
-                  'Last cleanup: ${DateFormat('yyyy-MM-dd HH:mm').format(settings.lastCleanup!.toLocal())}',
+                  s.analyticsLastCleanup(DateFormat('yyyy-MM-dd HH:mm')
+                      .format(settings.lastCleanup!.toLocal())),
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ),
@@ -1267,13 +1496,14 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
             // ── Save button ───────────────────────────────────────────────
             ElevatedButton.icon(
               icon: const Icon(Icons.save),
-              label: const Text('Save settings'),
+              label: Text(s.analyticsSaveSettings),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(44),
               ),
               onPressed: (_historyDays == null ||
                       _eventsDays == null ||
                       _logsDays == null ||
+                      _debounceMin == null ||
                       _intervalHours == null)
                   ? null
                   : () async {
@@ -1285,13 +1515,14 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
                                 historyRetentionDays: _historyDays!,
                                 eventsRetentionDays: _eventsDays!,
                                 logsRetentionDays: _logsDays!,
+                                plantCheckDebounceMinutes: _debounceMin!,
                                 cleanupIntervalHours: _intervalHours!,
                               ));
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Settings saved'),
-                                  duration: Duration(seconds: 2)),
+                              SnackBar(
+                                  content: Text(s.analyticsSettingsSaved),
+                                  duration: const Duration(seconds: 2)),
                             );
                           }
                         },
@@ -1435,16 +1666,15 @@ class _DisabledBanner extends StatelessWidget {
             Icon(Icons.analytics_outlined,
                 size: 56, color: Colors.orange.shade300),
             const SizedBox(height: 16),
-            const Text(
-              'Analytics is disabled',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+            Text(
+              S.of(context).analyticsDisabledBannerTitle,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'No new data is being recorded.\n'
-              'Go to the Settings tab to re-enable analytics.',
+            Text(
+              S.of(context).analyticsDisabledBannerBody,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.grey),
             ),
           ],
         ),

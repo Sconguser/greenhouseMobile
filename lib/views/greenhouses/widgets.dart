@@ -7,7 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:maker_greenhouse/models/has_parameters.dart';
 import 'package:maker_greenhouse/models/has_plants.dart';
+import 'package:maker_greenhouse/providers/analytics_target_provider.dart';
 import 'package:maker_greenhouse/providers/greenhouse_notifier.dart';
+import 'package:maker_greenhouse/providers/navigation_notifier.dart';
+import 'package:maker_greenhouse/providers/plant_alert_provider.dart';
 import 'package:maker_greenhouse/providers/plant_list_controller_provider.dart';
 import 'package:maker_greenhouse/shared/ui_constants.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
@@ -18,7 +21,9 @@ import '../../models/greenhouse_model.dart';
 import '../../models/greenhouse_status_model.dart';
 import '../../models/has_parametrized_children.dart';
 import '../../models/parameter_model.dart';
+import '../../models/plant_alert_model.dart';
 import '../../shared/help.dart';
+import '../../shared/plant_health.dart';
 import '../../models/parameter_type.dart';
 import '../../models/requirement_model.dart';
 import '../../models/zone_model.dart';
@@ -103,10 +108,24 @@ class EntityTile extends ConsumerWidget {
             ? GreenhouseStatusIndicator(
                 greenhouseStatus: greenhouse!.status)
             : null,
-        title: Text(
-          entity.getName,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+        title: (isGreenhouse && greenhouse!.id != null)
+            ? Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      entity.getName,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  _PlantAlertBadge(greenhouseId: greenhouse.id!),
+                ],
+              )
+            : Text(
+                entity.getName,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
         subtitle: isGreenhouse
             ? Column(
                 mainAxisSize: MainAxisSize.min,
@@ -116,7 +135,7 @@ class EntityTile extends ConsumerWidget {
                   if (pendingChanges.isNotEmpty && onPushToBoard != null)
                     _PendingPushBanner(
                       onPressed: () =>
-                          onPushToBoard!(greenhouse!, context, ref),
+                          onPushToBoard!(greenhouse, context, ref),
                     ),
                 ],
               )
@@ -135,6 +154,8 @@ class EntityTile extends ConsumerWidget {
                         ? (param) => onAddParameter!(entity, param)
                         : null,
                     onDeleteParameter: onDeleteParameter,
+                    checkPlantImpact: (changed) =>
+                        checkParameterImpact(entity, changed),
                   ),
                 if (entity is HasParametrizedChildren)
                   ...((entity as HasParametrizedChildren)
@@ -341,18 +362,192 @@ class EntityTile extends ConsumerWidget {
 
 // â”€â”€â”€ Parameters control panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+/// Small amber count chip shown on a greenhouse tile when it has active
+/// plant-health alerts. Hidden when there are none (or while loading/erroring).
+class _PlantAlertBadge extends ConsumerWidget {
+  const _PlantAlertBadge({required this.greenhouseId});
+
+  final int greenhouseId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = ref
+            .watch(plantAlertCountProvider(greenhouseId: greenhouseId))
+            .valueOrNull ??
+        0;
+    if (count == 0) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: Tooltip(
+        message: S.of(context).plantAlertBadgeTooltip(count),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _showPlantAlertSheet(context, greenhouseId),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.warning_amber_rounded,
+                    size: 14, color: Colors.orange),
+                const SizedBox(width: 4),
+                Text(
+                  '$count',
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet listing a greenhouse's active plant alerts in place (without
+/// leaving the controls screen). Each row can be dismissed; "View all" deep-links
+/// to the Plants tab of the Analytics screen for the same greenhouse.
+void _showPlantAlertSheet(BuildContext context, int greenhouseId) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => _PlantAlertSheet(greenhouseId: greenhouseId),
+  );
+}
+
+class _PlantAlertSheet extends ConsumerWidget {
+  const _PlantAlertSheet({required this.greenhouseId});
+
+  final int greenhouseId;
+
+  // Tab order in AnalyticsView: Parameters, Events, Logs, Plants, Settings.
+  static const int _plantsTabIndex = 3;
+  static const int _analyticsNavIndex = 1;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final alertsAsync = ref.watch(plantAlertsProvider(greenhouseId: greenhouseId));
+
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Row(
+              children: [
+                const Icon(Icons.local_florist, color: Colors.green),
+                const SizedBox(width: 8),
+                Text(S.of(context).plantAlertsTitle,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: alertsAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(S.of(context).error(e),
+                    style: const TextStyle(color: Colors.red)),
+              ),
+              data: (alerts) => alerts.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(S.of(context).plantAlertsNoneActive,
+                          style: const TextStyle(color: Colors.grey)),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      itemCount: alerts.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (ctx, i) =>
+                          _sheetRow(ctx, ref, alerts[i]),
+                    ),
+            ),
+          ),
+          const Divider(height: 1),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+              child: TextButton.icon(
+                icon: const Icon(Icons.open_in_new, size: 18),
+                label: Text(S.of(context).plantAlertsViewAll),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  ref
+                      .read(analyticsTargetProvider.notifier)
+                      .set(greenhouseId, _plantsTabIndex);
+                  ref
+                      .read(navigationNotifierProvider.notifier)
+                      .navigate(_analyticsNavIndex);
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sheetRow(BuildContext context, WidgetRef ref, PlantAlert alert) {
+    final s = S.of(context);
+    return ListTile(
+      dense: true,
+      leading: const Icon(Icons.warning_amber_rounded,
+          color: Colors.red, size: 20),
+      title: Text(
+        alert.message ??
+            s.plantAlertFallback(
+                alert.plantName ?? s.plantAlertGenericName,
+                alert.requirementName ?? ''),
+        style: const TextStyle(fontSize: 13),
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.close, size: 18),
+        tooltip: s.plantAlertsDismiss,
+        onPressed: () => ref.read(dismissPlantAlertProvider(
+          alertId: alert.id,
+          greenhouseId: greenhouseId,
+        ).future),
+      ),
+    );
+  }
+}
+
 class ParametersControlPanel extends ConsumerStatefulWidget {
   const ParametersControlPanel({
     super.key,
     required this.parameters,
     this.onAddParameter,
     this.onDeleteParameter,
+    this.checkPlantImpact,
   });
 
   final List<Parameter> parameters;
   // null = feature disabled (e.g., during entity creation flow)
   final Future<void> Function(Parameter param)? onAddParameter;
   final Future<void> Function(Parameter param)? onDeleteParameter;
+
+  /// Given the pending parameter changes, returns any plant requirements they
+  /// would break. null = check disabled (e.g. during entity creation).
+  final List<PlantBreach> Function(List<Parameter> changed)? checkPlantImpact;
 
   @override
   ConsumerState<ParametersControlPanel> createState() =>
@@ -528,31 +723,99 @@ class _ParametersControlPanelState
   ElevatedButton _buildConfirmButton(BuildContext context) {
     return ElevatedButton(
       onPressed: () {
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: Text(S.of(context).controlsDialogTitle),
-            content: Text(S.of(context).controlsDialogContent),
-            actions: [
-              TextButton(
-                child: Text(S.of(context).controlsDialogReject),
-                onPressed: () => Navigator.of(dialogCtx).pop(),
-              ),
-              TextButton(
-                child: Text(S.of(context).controlsDialogAccept),
-                onPressed: () {
-                  Navigator.of(dialogCtx).pop();
-                  ref
-                      .read(greenhouseNotifierProvider.notifier)
-                      .updateParameters(_changed);
-                },
-              ),
-            ],
-          ),
-          barrierDismissible: true,
-        );
+        // Warn first if the pending changes would push a plant out of its
+        // requirement range; otherwise show the normal confirmation.
+        final breaches = widget.checkPlantImpact?.call(_changed) ?? const [];
+        if (breaches.isNotEmpty) {
+          _showPlantImpactDialog(context, breaches);
+        } else {
+          _showConfirmDialog(context);
+        }
       },
       child: Text(S.of(context).controlsConfirmChange),
+    );
+  }
+
+  void _applyChanges() {
+    ref.read(greenhouseNotifierProvider.notifier).updateParameters(_changed);
+  }
+
+  void _showConfirmDialog(BuildContext context) {
+    final s = S.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(s.controlsDialogTitle),
+        content: Text(s.controlsDialogContent),
+        actions: [
+          TextButton(
+            child: Text(s.controlsDialogReject),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+          ),
+          TextButton(
+            child: Text(s.controlsDialogAccept),
+            onPressed: () {
+              Navigator.of(dialogCtx).pop();
+              _applyChanges();
+            },
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  void _showPlantImpactDialog(BuildContext context, List<PlantBreach> breaches) {
+    final s = S.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            const SizedBox(width: 8),
+            Expanded(child: Text(s.plantImpactTitle)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(s.plantImpactSubtitle),
+              const SizedBox(height: 12),
+              ...breaches.map((b) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('•  '),
+                        Expanded(
+                          child: Text(b.describe(),
+                              style: const TextStyle(fontSize: 13)),
+                        ),
+                      ],
+                    ),
+                  )),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: Text(s.controlsDialogReject),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.orange.shade800),
+            child: Text(s.plantImpactProceed),
+            onPressed: () {
+              Navigator.of(dialogCtx).pop();
+              _applyChanges();
+            },
+          ),
+        ],
+      ),
+      barrierDismissible: true,
     );
   }
 

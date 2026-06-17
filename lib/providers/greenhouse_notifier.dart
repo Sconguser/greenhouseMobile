@@ -10,6 +10,7 @@ import '../models/parameter_model.dart';
 import '../models/zone_model.dart';
 import 'http_conf.dart';
 import 'http_service.dart';
+import 'plant_alert_provider.dart';
 
 part 'greenhouse_notifier.g.dart';
 
@@ -27,9 +28,6 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
       gh.mappingConfigSynced == false ||
       gh.modelSynced == false;
 
-  static bool _shouldAutoPoll(Greenhouse gh) =>
-      _hasPendingSync(gh) || gh.status == Status.ON;
-
   void _scheduleNextPoll(List<Greenhouse> greenhouses) {
     final hasPendingSync = greenhouses.any(_hasPendingSync);
     final hasLiveBoard = greenhouses.any((gh) => gh.status == Status.ON);
@@ -39,6 +37,17 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
         : const Duration(seconds: 10);
     final timer = Timer(interval, () => silentRefresh());
     ref.onDispose(timer.cancel);
+  }
+
+  // Keep the per-greenhouse plant-alert badge counts fresh on the same cadence
+  // as the board poll. Invalidation only triggers a refetch where the count is
+  // actually being watched (i.e. a visible greenhouse tile).
+  void _refreshPlantAlertCounts(List<Greenhouse> greenhouses) {
+    for (final gh in greenhouses) {
+      if (gh.id != null) {
+        ref.invalidate(plantAlertCountProvider(greenhouseId: gh.id!));
+      }
+    }
   }
 
   // Fetches without touching state — used by both initial load and silent refresh.
@@ -59,6 +68,7 @@ class GreenhouseNotifier extends _$GreenhouseNotifier {
     try {
       final updated = await _fetchGreenhouses();
       state = AsyncValue.data(updated);
+      _refreshPlantAlertCounts(updated);
       _scheduleNextPoll(updated);
     } catch (_) {
       // Don't break the existing view on a background refresh failure.

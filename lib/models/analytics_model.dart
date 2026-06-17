@@ -89,6 +89,7 @@ abstract class AnalyticsSettings with _$AnalyticsSettings {
     @Default(90) int historyRetentionDays,
     @Default(365) int eventsRetentionDays,
     @Default(7) int logsRetentionDays,
+    @Default(10) int plantCheckDebounceMinutes,
     @Default(24) int cleanupIntervalHours,
     DateTime? lastCleanup,
   }) = _AnalyticsSettings;

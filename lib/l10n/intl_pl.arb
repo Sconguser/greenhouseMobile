@@ -41,6 +41,8 @@
     "humidity":"Wilgotność",
     "soilHumidity":"Wilgotność gleby",
     "controlsControlPanel":"Panel sterowania",
+    "controlPanelHelpTitle":"Panel sterowania",
+    "controlPanelHelpBody":"Panel sterowania wyświetla wszystkie parametry tego obiektu (szklarni, strefy lub doniczki) i pozwala nimi zarządzać.\n\nDla każdego parametru możesz:\n• Odczytać jego bieżącą wartość (najnowszy odczyt z urządzenia).\n• Ustawić żądaną wartość dla parametrów zmiennych — cel, do którego ma dążyć sterownik. Naciśnij Zatwierdź, aby ją wysłać, lub Resetuj, aby odrzucić niezapisane zmiany.\n\nUżyj opcji Dodaj parametr, aby utworzyć nowy. Parametr to po prostu nazwana wartość (np. „Temperatura”, „Światło”) z opcjonalną jednostką i zakresem min/max. Oznacz go jako zmienny, jeśli może być sterowany, a nie tylko mierzony.\n\nSam parametr przechowuje jedynie wartość. Aby faktycznie odczytywać go z czujnika lub sterować nim za pomocą urządzenia wykonawczego, powiąż go w Mapowaniach.",
     "controlsDialogTitle":"Czy jesteście pewni?",
     "controlsDialogContent":"Ta akcja może spowodować niechciane uszkodzenie szklarni i roślin. Przed kontynuacją, upewnijcie się, że ustawiliście odpowiednie parametry",
     "controlsDialogAccept":"Tak",

@@ -1098,40 +1098,39 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
         _intervalHours ??=
             _nearestOption(settings.cleanupIntervalHours, _intervalOptions);
 
+        final dark = Theme.of(context).brightness == Brightness.dark;
+        final enabled = settings.analyticsEnabled;
+        final accent = enabled ? Colors.green : Colors.orange;
+        final cardColor = (dark ? accent.shade900 : accent.shade50)
+            .withValues(alpha: dark ? 0.30 : 1.0);
+        final titleColor = dark ? accent.shade200 : accent.shade800;
+
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
             // ── Master enable / disable toggle ────────────────────────────
             Card(
               elevation: 1,
-              color: settings.analyticsEnabled
-                  ? Colors.green.shade50
-                  : Colors.orange.shade50,
+              color: cardColor,
               child: SwitchListTile(
                 secondary: Icon(
-                  settings.analyticsEnabled
-                      ? Icons.analytics
-                      : Icons.analytics_outlined,
-                  color: settings.analyticsEnabled ? Colors.green : Colors.orange,
+                  enabled ? Icons.analytics : Icons.analytics_outlined,
+                  color: accent,
                 ),
                 title: Text(
-                  settings.analyticsEnabled
-                      ? 'Analytics enabled'
-                      : 'Analytics disabled',
+                  enabled ? 'Analytics enabled' : 'Analytics disabled',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: settings.analyticsEnabled
-                        ? Colors.green.shade800
-                        : Colors.orange.shade800,
+                    color: titleColor,
                   ),
                 ),
                 subtitle: Text(
-                  settings.analyticsEnabled
-                      ? 'Sensor readings and events are being recorded.'
-                      : 'No data is being recorded. Existing data is preserved.',
+                  '${enabled ? 'Sensor readings and events are being recorded.' : 'No data is being recorded. Existing data is preserved.'}'
+                  '\nThis switch is saved automatically — no need to press Save.',
                   style: const TextStyle(fontSize: 12),
                 ),
-                value: settings.analyticsEnabled,
+                isThreeLine: true,
+                value: enabled,
                 activeColor: Colors.green,
                 inactiveThumbColor: Colors.orange,
                 onChanged: (on) async {

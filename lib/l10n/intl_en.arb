@@ -41,6 +41,8 @@
     "humidity":"Humidity",
     "soilHumidity":"Soil humidity",
     "controlsControlPanel":"Control panel",
+    "controlPanelHelpTitle":"Control panel",
+    "controlPanelHelpBody":"The control panel lists every parameter on this entity (greenhouse, zone or flowerpot) and lets you manage them.\n\nFor each parameter you can:\n• Read its current value (the latest reading from the device).\n• Set a requested value for mutable parameters — the target the controller should drive toward. Tap Confirm to send it, or Reset to discard unsent changes.\n\nUse Add parameter to create a new one. A parameter is just a named value (e.g. 'Temperature', 'Light') with optional unit and min/max range. Mark it mutable if it can be controlled, not just measured.\n\nA parameter on its own only stores a value. To actually read it from a sensor or drive it with an actuator, bind it in Mappings.",
     "controlsDialogTitle":"Are you sure?",
     "controlsDialogContent":"This may cause unintended damage to the greenhouse and plants, make sure you have set correct parameters",
     "controlsDialogAccept":"Yes",

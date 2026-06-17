@@ -18,6 +18,7 @@ import '../../models/greenhouse_model.dart';
 import '../../models/greenhouse_status_model.dart';
 import '../../models/has_parametrized_children.dart';
 import '../../models/parameter_model.dart';
+import '../../shared/help.dart';
 import '../../models/parameter_type.dart';
 import '../../models/requirement_model.dart';
 import '../../models/zone_model.dart';
@@ -408,9 +409,20 @@ class _ParametersControlPanelState
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: ExpansionTile(
-          title: Text(
-            S.of(context).controlsControlPanel,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  S.of(context).controlsControlPanel,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              HelpButton(
+                compact: true,
+                title: S.of(context).controlPanelHelpTitle,
+                body: S.of(context).controlPanelHelpBody,
+              ),
+            ],
           ),
           children: [
             Column(

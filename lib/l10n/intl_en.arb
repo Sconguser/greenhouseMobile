@@ -236,5 +236,22 @@
     "drawerPlants":"Plants",
     "plantCatalogueTitle":"Plant catalogue",
     "plantRequirementsAction":"Requirements",
-    "noPlantsYet":"No plants in catalogue yet."
+    "noPlantsYet":"No plants in catalogue yet.",
+
+    "pushFailed":"Failed to push to the controller. Please try again.",
+    "helpClose":"Close",
+    "devicesHelpTitle":"About devices",
+    "devicesHelpBody":"A device is one piece of hardware wired to the controller — a sensor or an actuator.\n\nList every device you have. For each one set:\n• Name — a label so you recognise it (you can rename it later without breaking anything).\n• Driver — how the board talks to it: digital (relays, switches, simple outputs), dht22 (temperature/humidity sensor) or muxAnalog (analog sensor behind a multiplexer).\n• Type — for digital devices: value (a sensor or regulated output) or toggle (simple on/off).\n• Pin — the GPIO pin it is connected to.\n\nWhen you tap Save & Push, each device is given a permanent id and the controller reboots to apply the list. Always save your devices before creating mappings — a device can only be used in a mapping after it has been saved.",
+    "mappingsHelpTitle":"About mappings",
+    "mappingsHelpBody":"A mapping is a control rule. It connects one parameter (what you want to measure or control) with the device(s) that read and/or drive it.\n\nEach mapping has up to three parts:\n• Read sensor — the device that measures the value (optional).\n• Write actuator — the device that changes the value, plus how it should behave (optional).\n• Analog scaling — converts a raw sensor reading into real units (only for raw analog sensors).\n\nExample: 'Keep temperature at 25°C — read it with the DHT22 and raise it with the heater.'\n\nAfter editing, tap Save & Push; the controller saves the rules and reboots to apply them.",
+    "parameterSectionHelpTitle":"Parameter",
+    "parameterSectionHelpBody":"Choose where the value lives (the whole greenhouse, a zone, or a flowerpot) and which parameter this rule controls.\n\nThe parameter must already exist. Create parameters from the Control Panel before mapping them.",
+    "readSensorHelpTitle":"Read sensor",
+    "readSensorHelpBody":"Turn this on if a sensor measures this parameter.\n\n• Device — pick the sensor.\n• Mux channel / Selector pins — only for muxAnalog devices: which channel on the multiplexer this sensor uses and the selector GPIO pins.\n\nLeave this off for things you only switch manually (e.g. a lamp). Without a sensor the controller cannot measure the value, so it just applies your requested setting directly.",
+    "writeActuatorHelpTitle":"Write actuator",
+    "writeActuatorHelpBody":"Turn this on if a device changes this parameter.\n\n• Device — the actuator (a digital device such as a relay).\n• Direction — increase if the device raises the value (heater, humidifier); decrease if it lowers it (fan, cooler).\n• Hysteresis — the dead-band around the target, in the parameter's own units (see the ? on that field).\n• Active low — turn on if your relay switches ON with a LOW signal (common on relay boards).\n• Output mode — binary (plain on/off) or pwm (proportional power/speed).\n• Min on / Min off — the shortest time (in milliseconds) the device must stay on or off before switching again, to avoid rapid cycling.",
+    "analogScalingHelpTitle":"Analog scaling",
+    "analogScalingHelpBody":"Only needed for raw analog sensors whose readings are not already in real units (e.g. a muxAnalog soil probe).\n\nIt linearly converts the raw reading into the parameter's units:\n• Raw min / Raw max — the range the sensor produces (e.g. 0 … 1024).\n• Display min / Display max — the real-world range it represents (e.g. 0 … 100 %).\n\nThe ranges can be inverted: a probe that reads 1024 when dry and 0 when wet uses Raw min 1024, Raw max 0, Display min 0, Display max 100.\n\nLeave this off for DHT22 and other sensors that already report real units.",
+    "hysteresisHelpTitle":"Hysteresis",
+    "hysteresisHelpBody":"Hysteresis is a dead-band around your target that stops the actuator switching on and off too often.\n\nIt is always in the parameter's own units — the mapped/display units, NOT the raw sensor range. The controller scales the raw reading to real units first, then applies hysteresis.\n\nExample: temperature target 25°C with hysteresis 2 → the heater turns ON below 23°C and OFF above 27°C.\n\nStarting points: temperature 1–2°, humidity 3–5%, soil moisture 5–10%. Leave blank to use the default (0.5). Not used for toggle parameters or PWM output."
 }

@@ -8,6 +8,7 @@ import '../../generated/l10n.dart';
 import '../../models/device_config_model.dart';
 import '../../models/greenhouse_model.dart';
 import '../../providers/device_config_notifier.dart';
+import '../../shared/help.dart';
 import '../../shared/loading_indicator.dart';
 import '../error/error_view.dart';
 
@@ -23,6 +24,12 @@ class DeviceConfigView extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(S.of(context).devicesTitle(greenhouse.name)),
+        actions: [
+          HelpButton(
+            title: S.of(context).devicesHelpTitle,
+            body: S.of(context).devicesHelpBody,
+          ),
+        ],
       ),
       body: configAsync.when(
         data: (configs) => _DeviceConfigList(

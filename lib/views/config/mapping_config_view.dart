@@ -12,6 +12,7 @@ import '../../models/parameter_model.dart';
 import '../../models/zone_model.dart';
 import '../../providers/device_config_notifier.dart';
 import '../../providers/mapping_config_notifier.dart';
+import '../../shared/help.dart';
 import '../../shared/loading_indicator.dart';
 import '../error/error_view.dart';
 
@@ -36,7 +37,15 @@ class MappingConfigView extends ConsumerWidget {
     final configAsync =
         ref.watch(mappingConfigNotifierProvider(greenhouse.id!));
     return Scaffold(
-      appBar: AppBar(title: Text(S.of(context).mappingsTitle(greenhouse.name))),
+      appBar: AppBar(
+        title: Text(S.of(context).mappingsTitle(greenhouse.name)),
+        actions: [
+          HelpButton(
+            title: S.of(context).mappingsHelpTitle,
+            body: S.of(context).mappingsHelpBody,
+          ),
+        ],
+      ),
       body: configAsync.when(
         data: (mappings) => _MappingList(
           greenhouse: greenhouse,
@@ -402,7 +411,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── Parameter ──────────────────────────────────────────────────
-              _sectionHeader(s.mappingParameterSection),
+              _sectionHeader(s.mappingParameterSection,
+                  helpTitle: s.parameterSectionHelpTitle,
+                  helpBody: s.parameterSectionHelpBody),
               DropdownButtonFormField<String>(
                 value: _scope,
                 decoration: InputDecoration(
@@ -463,7 +474,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
 
               const SizedBox(height: 16),
               // ── Read sensor ────────────────────────────────────────────────
-              _sectionHeader(s.readSensorSection),
+              _sectionHeader(s.readSensorSection,
+                  helpTitle: s.readSensorHelpTitle,
+                  helpBody: s.readSensorHelpBody),
               SwitchListTile(
                 value: _hasRead,
                 title: Text(s.hasReadSensor),
@@ -530,7 +543,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
 
               const SizedBox(height: 16),
               // ── Write actuator ─────────────────────────────────────────────
-              _sectionHeader(s.writeActuatorSection),
+              _sectionHeader(s.writeActuatorSection,
+                  helpTitle: s.writeActuatorHelpTitle,
+                  helpBody: s.writeActuatorHelpBody),
               SwitchListTile(
                 value: _hasWrite,
                 title: Text(s.hasWriteActuator),
@@ -580,7 +595,12 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                   initialValue: m?.hysteresis?.toString(),
                   decoration: InputDecoration(
                       labelText: s.hysteresisLabel,
-                      border: const OutlineInputBorder()),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: HelpButton(
+                        compact: true,
+                        title: s.hysteresisHelpTitle,
+                        body: s.hysteresisHelpBody,
+                      )),
                   keyboardType: const TextInputType.numberWithOptions(
                       decimal: true, signed: false),
                 ),
@@ -631,7 +651,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
 
               const SizedBox(height: 16),
               // ── Analog scaling ─────────────────────────────────────────────
-              _sectionHeader(s.analogScalingSection),
+              _sectionHeader(s.analogScalingSection,
+                  helpTitle: s.analogScalingHelpTitle,
+                  helpBody: s.analogScalingHelpBody),
               SwitchListTile(
                 value: _hasScaling,
                 title: Text(s.applyAnalogScaling),
@@ -756,10 +778,18 @@ class _MappingFormPageState extends State<_MappingFormPage> {
     );
   }
 
-  Widget _sectionHeader(String title) => Padding(
+  Widget _sectionHeader(String title, {String? helpTitle, String? helpBody}) =>
+      Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Text(title,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        child: Row(
+          children: [
+            Text(title,
+                style:
+                    const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            if (helpBody != null)
+              HelpButton(compact: true, title: helpTitle!, body: helpBody),
+          ],
+        ),
       );
 
   void _submit() {

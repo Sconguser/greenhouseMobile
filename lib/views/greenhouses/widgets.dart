@@ -664,14 +664,18 @@ class _ParametersControlPanelState
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
                 iconSize: 20,
-                tooltip: 'Delete parameter',
+                tooltip: S.of(context).deleteParameterTitle,
                 onPressed: () => _confirmDeleteParameter(parameter),
               ),
           ],
         ),
-        Text('Current: ${parameter.currentValue ?? '—'} ${parameter.unit ?? ''}',
+        Text(
+            S.of(context).parameterCurrentLabel(
+                _displayValue(parameter, parameter.currentValue)),
             style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        Text('Requested: ${parameter.requestedValue ?? '—'} ${parameter.unit ?? ''}',
+        Text(
+            S.of(context).parameterRequestedLabel(
+                _displayValue(parameter, parameter.requestedValue)),
             style: const TextStyle(fontSize: 12, color: Colors.grey)),
         Row(
           children: [
@@ -682,6 +686,16 @@ class _ParametersControlPanelState
         const Divider(),
       ],
     );
+  }
+
+  /// Human-friendly value: On/Off for toggles, value plus unit otherwise.
+  String _displayValue(Parameter parameter, double? v) {
+    if (v == null) return '—';
+    if (parameter.parameterType == ParameterType.TOGGLE) {
+      return v >= 0.5 ? S.of(context).toggleOn : S.of(context).toggleOff;
+    }
+    final unit = parameter.unit ?? '';
+    return unit.isEmpty ? '$v' : '$v $unit';
   }
 
   void _confirmDeleteParameter(Parameter parameter) {
@@ -822,21 +836,37 @@ class _ParametersControlPanelState
   Widget _buildControlWidget(Parameter parameter) {
     switch (parameter.parameterType) {
       case ParameterType.TOGGLE:
-        return Checkbox(
-          value: (parameter.requestedValue ?? 0) == 1,
-          onChanged: parameter.mutable
-              ? (newVal) {
-                  setState(() {
-                    final idx = _temp.indexWhere((p) => p.id == parameter.id);
-                    if (idx != -1) {
-                      final dbl = newVal == true ? 1.0 : 0.0;
-                      _changed.removeWhere((p) => p.id == parameter.id);
-                      _temp[idx] = _temp[idx].copyWith(requestedValue: dbl);
-                      _changed.add(_temp[idx]);
-                    }
-                  });
-                }
-              : null,
+        final on = (parameter.requestedValue ?? 0) >= 0.5;
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Switch(
+                value: on,
+                onChanged: parameter.mutable
+                    ? (newVal) {
+                        setState(() {
+                          final idx =
+                              _temp.indexWhere((p) => p.id == parameter.id);
+                          if (idx != -1) {
+                            final dbl = newVal ? 1.0 : 0.0;
+                            _changed.removeWhere((p) => p.id == parameter.id);
+                            _temp[idx] =
+                                _temp[idx].copyWith(requestedValue: dbl);
+                            _changed.add(_temp[idx]);
+                          }
+                        });
+                      }
+                    : null,
+              ),
+              Text(
+                on ? S.of(context).toggleOn : S.of(context).toggleOff,
+                style: TextStyle(
+                    fontSize: 13, color: on ? Colors.green : Colors.grey),
+              ),
+            ],
+          ),
         );
       case ParameterType.VALUE:
         return FlutterSlider(
@@ -875,6 +905,7 @@ class ParameterForm extends ConsumerStatefulWidget {
 class _ParameterFormState extends ConsumerState<ParameterForm> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _isMutable = true;
+  ParameterType _type = ParameterType.VALUE;
 
   static String _formatBound(double v) =>
       v == v.truncateToDouble() ? v.toInt().toString() : v.toString();
@@ -904,48 +935,52 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                         errorText: S.of(context).authThisFieldCannotBeEmpty),
                   ),
                   buildSizedBoxBetweenInputs(),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FormBuilderTextField(
-                          name: 'min',
-                          initialValue: '0',
-                          decoration: InputDecoration(
-                            labelText: S.of(context).parameterMinLabel,
-                            border: const OutlineInputBorder(),
+                  // Toggle parameters are implicitly 0/1 and unitless, so the
+                  // min/max and unit fields only apply to Value parameters.
+                  if (_type == ParameterType.VALUE) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FormBuilderTextField(
+                            name: 'min',
+                            initialValue: '0',
+                            decoration: InputDecoration(
+                              labelText: S.of(context).parameterMinLabel,
+                              border: const OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true, signed: true),
+                            validator: FormBuilderValidators.numeric(),
                           ),
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true, signed: true),
-                          validator: FormBuilderValidators.numeric(),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FormBuilderTextField(
-                          name: 'max',
-                          initialValue: '100',
-                          decoration: InputDecoration(
-                            labelText: S.of(context).parameterMaxLabel,
-                            border: const OutlineInputBorder(),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FormBuilderTextField(
+                            name: 'max',
+                            initialValue: '100',
+                            decoration: InputDecoration(
+                              labelText: S.of(context).parameterMaxLabel,
+                              border: const OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true, signed: true),
+                            validator: FormBuilderValidators.numeric(),
                           ),
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true, signed: true),
-                          validator: FormBuilderValidators.numeric(),
                         ),
-                      ),
-                    ],
-                  ),
-                  buildSizedBoxBetweenInputs(),
-                  FormBuilderTextField(
-                    name: 'unit',
-                    decoration: InputDecoration(
-                      labelText: S.of(context).parameterUnitLabel,
-                      border: const OutlineInputBorder(),
+                      ],
                     ),
-                    maxLength: 8,
-                    maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                  ),
-                  buildSizedBoxBetweenInputs(),
+                    buildSizedBoxBetweenInputs(),
+                    FormBuilderTextField(
+                      name: 'unit',
+                      decoration: InputDecoration(
+                        labelText: S.of(context).parameterUnitLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      maxLength: 8,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                    ),
+                    buildSizedBoxBetweenInputs(),
+                  ],
                   FormBuilderRadioGroup<ParameterType>(
                     name: 'parameterType',
                     decoration: InputDecoration(
@@ -953,11 +988,15 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                       border: const OutlineInputBorder(),
                     ),
                     initialValue: ParameterType.VALUE,
-                    options: const [
+                    onChanged: (val) =>
+                        setState(() => _type = val ?? ParameterType.VALUE),
+                    options: [
                       FormBuilderFieldOption(
-                          value: ParameterType.VALUE, child: Text('Value')),
+                          value: ParameterType.VALUE,
+                          child: Text(S.of(context).parameterTypeValue)),
                       FormBuilderFieldOption(
-                          value: ParameterType.TOGGLE, child: Text('Toggle')),
+                          value: ParameterType.TOGGLE,
+                          child: Text(S.of(context).parameterTypeToggle)),
                     ],
                   ),
                   buildSizedBoxBetweenInputs(),
@@ -970,38 +1009,48 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                   ),
                   if (_isMutable) ...[
                     buildSizedBoxBetweenInputs(),
-                    FormBuilderTextField(
-                      name: 'requestedValue',
-                      initialValue: '0',
-                      decoration: InputDecoration(
-                        labelText: S.of(context).parameterRequestedValueLabel,
-                        border: const OutlineInputBorder(),
+                    if (_type == ParameterType.TOGGLE)
+                      FormBuilderSwitch(
+                        name: 'requestedToggle',
+                        initialValue: false,
+                        title: Text(S.of(context).parameterInitialStateLabel),
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                        ),
+                      )
+                    else
+                      FormBuilderTextField(
+                        name: 'requestedValue',
+                        initialValue: '0',
+                        decoration: InputDecoration(
+                          labelText: S.of(context).parameterRequestedValueLabel,
+                          border: const OutlineInputBorder(),
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true, signed: true),
+                        validator: FormBuilderValidators.compose([
+                          FormBuilderValidators.numeric(),
+                          (val) {
+                            final v = double.tryParse(val ?? '');
+                            if (v == null) return null;
+                            final fields = _formKey.currentState?.fields;
+                            final minVal = double.tryParse(
+                                fields?['min']?.value as String? ?? '');
+                            final maxVal = double.tryParse(
+                                fields?['max']?.value as String? ?? '');
+                            final s = S.of(context);
+                            if (minVal != null && v < minVal) {
+                              return s.parameterRequestedValueTooLow(
+                                  _formatBound(minVal));
+                            }
+                            if (maxVal != null && v > maxVal) {
+                              return s.parameterRequestedValueTooHigh(
+                                  _formatBound(maxVal));
+                            }
+                            return null;
+                          },
+                        ]),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true, signed: true),
-                      validator: FormBuilderValidators.compose([
-                        FormBuilderValidators.numeric(),
-                        (val) {
-                          final v = double.tryParse(val ?? '');
-                          if (v == null) return null;
-                          final fields = _formKey.currentState?.fields;
-                          final minVal = double.tryParse(
-                              fields?['min']?.value as String? ?? '');
-                          final maxVal = double.tryParse(
-                              fields?['max']?.value as String? ?? '');
-                          final s = S.of(context);
-                          if (minVal != null && v < minVal) {
-                            return s.parameterRequestedValueTooLow(
-                                _formatBound(minVal));
-                          }
-                          if (maxVal != null && v > maxVal) {
-                            return s.parameterRequestedValueTooHigh(
-                                _formatBound(maxVal));
-                          }
-                          return null;
-                        },
-                      ]),
-                    ),
                   ],
                   buildSizedBoxBetweenInputs(),
                 ],
@@ -1014,19 +1063,37 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
             _formKey.currentState?.validate();
             if (_formKey.currentState?.isValid == true) {
               final fields = _formKey.currentState!.fields;
+              final type = fields['parameterType']!.value as ParameterType;
+              final isToggle = type == ParameterType.TOGGLE;
               final mutable = fields['mutable']!.value as bool? ?? true;
-              final requested = mutable
-                  ? double.tryParse(
-                          fields['requestedValue']?.value as String? ?? '') ??
-                      0
-                  : 0.0;
+
+              final double requested;
+              if (isToggle) {
+                // Toggle is implicitly 0/1; read the switch (off when immutable).
+                requested = mutable &&
+                        (fields['requestedToggle']?.value as bool? ?? false)
+                    ? 1.0
+                    : 0.0;
+              } else {
+                requested = mutable
+                    ? double.tryParse(
+                            fields['requestedValue']?.value as String? ?? '') ??
+                        0
+                    : 0.0;
+              }
+
               widget.onSubmit(Parameter(
                 name: fields['name']!.value as String,
                 mutable: mutable,
-                unit: fields['unit']!.value as String?,
-                parameterType: fields['parameterType']!.value as ParameterType,
-                min: double.tryParse(fields['min']!.value as String) ?? 0,
-                max: double.tryParse(fields['max']!.value as String) ?? 100,
+                // Toggle parameters carry no unit and are bounded to 0..1.
+                unit: isToggle ? null : fields['unit']?.value as String?,
+                parameterType: type,
+                min: isToggle
+                    ? 0
+                    : double.tryParse(fields['min']!.value as String) ?? 0,
+                max: isToggle
+                    ? 1
+                    : double.tryParse(fields['max']!.value as String) ?? 100,
                 currentValue: requested,
                 requestedValue: requested,
               ));

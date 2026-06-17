@@ -9,6 +9,7 @@ import '../../models/device_config_model.dart';
 import '../../models/greenhouse_model.dart';
 import '../../models/mapping_config_model.dart';
 import '../../models/parameter_model.dart';
+import '../../models/parameter_type.dart';
 import '../../models/zone_model.dart';
 import '../../providers/device_config_notifier.dart';
 import '../../providers/mapping_config_notifier.dart';
@@ -211,7 +212,8 @@ class _UnsavedBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 18),
+          const Icon(Icons.warning_amber_rounded,
+              color: Colors.orange, size: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Text(message,
@@ -252,8 +254,8 @@ class _MappingCard extends StatelessWidget {
       child: ListTile(
         leading: const Icon(Icons.device_hub),
         title: Text('${mapping.paramName} @ $scopeLabel'),
-        subtitle: Text(
-            [readLabel, writeLabel].where((s) => s != null).join(' · ')),
+        subtitle:
+            Text([readLabel, writeLabel].where((s) => s != null).join(' · ')),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -276,8 +278,8 @@ class _MappingCard extends StatelessWidget {
         return zone?.name ?? 'zone ${mapping.zoneId}';
       case 'flowerpot':
         for (final zone in greenhouse.zones) {
-          final pot = _firstOrNull(
-              zone.flowerpots, (p) => p.id == mapping.flowerpotId);
+          final pot =
+              _firstOrNull(zone.flowerpots, (p) => p.id == mapping.flowerpotId);
           if (pot != null) return '${zone.name} / ${pot.name}';
         }
         return 'flowerpot ${mapping.flowerpotId}';
@@ -358,8 +360,8 @@ class _MappingFormPageState extends State<_MappingFormPage> {
     _selectedWriteDeviceId = m.writeDeviceId;
   }
 
-  Zone? get _selectedZone => _firstOrNull(
-      widget.greenhouse.zones, (z) => z.id == _selectedZoneId);
+  Zone? get _selectedZone =>
+      _firstOrNull(widget.greenhouse.zones, (z) => z.id == _selectedZoneId);
 
   get _selectedFlowerpot {
     final zone = _selectedZone;
@@ -377,6 +379,13 @@ class _MappingFormPageState extends State<_MappingFormPage> {
         return widget.greenhouse.parameters;
     }
   }
+
+  /// True when the chosen parameter is a Toggle (on/off). Toggle control on the
+  /// board ignores hysteresis, so we hide that field for toggles.
+  bool get _selectedParamIsToggle =>
+      _firstOrNull(_scopeParameters, (p) => p.name == _selectedParamName)
+          ?.parameterType ==
+      ParameterType.TOGGLE;
 
   DeviceConfig? get _selectedReadDevice =>
       _firstOrNull(widget.devices, (d) => d.id == _selectedReadDeviceId);
@@ -415,7 +424,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                   helpTitle: s.parameterSectionHelpTitle,
                   helpBody: s.parameterSectionHelpBody),
               DropdownButtonFormField<String>(
-                value: _scope,
+                initialValue: _scope,
                 decoration: InputDecoration(
                     labelText: s.scopeLabel,
                     border: const OutlineInputBorder()),
@@ -433,7 +442,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
               if (_scope == 'zone' || _scope == 'flowerpot') ...[
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int?>(
-                  value: _selectedZoneId,
+                  initialValue: _selectedZoneId,
                   decoration: InputDecoration(
                       labelText: s.selectZone,
                       border: const OutlineInputBorder()),
@@ -453,7 +462,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
               if (_scope == 'flowerpot' && _selectedZone != null) ...[
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int?>(
-                  value: _selectedFlowerpotId,
+                  initialValue: _selectedFlowerpotId,
                   decoration: InputDecoration(
                       labelText: s.selectFlowerpot,
                       border: const OutlineInputBorder()),
@@ -482,7 +491,11 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 title: Text(s.hasReadSensor),
                 onChanged: (v) => setState(() {
                   _hasRead = v;
-                  if (!v) _selectedReadDeviceId = null;
+                  if (!v) {
+                    _selectedReadDeviceId = null;
+                    // Analog scaling only applies to a sensor reading.
+                    _hasScaling = false;
+                  }
                 }),
               ),
               if (_hasRead) ...[
@@ -495,7 +508,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                   )
                 else ...[
                   DropdownButtonFormField<int>(
-                    value: _selectedReadDeviceId,
+                    initialValue: _selectedReadDeviceId,
                     decoration: InputDecoration(
                         labelText: s.selectReadDevice,
                         border: const OutlineInputBorder()),
@@ -507,8 +520,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                                   Text('${d.name} (${d.driver}, pin ${d.pin})'),
                             ))
                         .toList(),
-                    onChanged: (v) =>
-                        setState(() => _selectedReadDeviceId = v),
+                    onChanged: (v) => setState(() => _selectedReadDeviceId = v),
                   ),
                   if (_readIsMux) ...[
                     const SizedBox(height: 8),
@@ -519,9 +531,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                           labelText: s.muxChannelLabel,
                           border: const OutlineInputBorder()),
                       keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly
-                      ],
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       validator: FormBuilderValidators.compose([
                         FormBuilderValidators.required(),
                         FormBuilderValidators.integer(),
@@ -564,7 +574,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                   )
                 else
                   DropdownButtonFormField<int>(
-                    value: _selectedWriteDeviceId,
+                    initialValue: _selectedWriteDeviceId,
                     decoration: InputDecoration(
                         labelText: s.selectWriteDevice,
                         border: const OutlineInputBorder()),
@@ -578,32 +588,38 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                     onChanged: (v) =>
                         setState(() => _selectedWriteDeviceId = v),
                   ),
-                const SizedBox(height: 8),
-                FormBuilderDropdown<String>(
-                  name: 'direction',
-                  initialValue: m?.direction ?? _directions.first,
-                  decoration: InputDecoration(
-                      labelText: s.directionLabel,
-                      border: const OutlineInputBorder()),
-                  items: _directions
-                      .map((d) => DropdownMenuItem(value: d, child: Text(d)))
-                      .toList(),
-                ),
-                const SizedBox(height: 8),
-                FormBuilderTextField(
-                  name: 'hysteresis',
-                  initialValue: m?.hysteresis?.toString(),
-                  decoration: InputDecoration(
-                      labelText: s.hysteresisLabel,
-                      border: const OutlineInputBorder(),
-                      suffixIcon: HelpButton(
-                        compact: true,
-                        title: s.hysteresisHelpTitle,
-                        body: s.hysteresisHelpBody,
-                      )),
-                  keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: false),
-                ),
+                // Direction and hysteresis are regulation settings: the board
+                // only uses them for a Value parameter driven by sensor
+                // feedback. They do nothing for toggles or manual (sensorless)
+                // control, so hide them unless a read sensor is selected.
+                if (_hasRead && !_selectedParamIsToggle) ...[
+                  const SizedBox(height: 8),
+                  FormBuilderDropdown<String>(
+                    name: 'direction',
+                    initialValue: m?.direction ?? _directions.first,
+                    decoration: InputDecoration(
+                        labelText: s.directionLabel,
+                        border: const OutlineInputBorder()),
+                    items: _directions
+                        .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                        .toList(),
+                  ),
+                  const SizedBox(height: 8),
+                  FormBuilderTextField(
+                    name: 'hysteresis',
+                    initialValue: m?.hysteresis?.toString(),
+                    decoration: InputDecoration(
+                        labelText: s.hysteresisLabel,
+                        border: const OutlineInputBorder(),
+                        suffixIcon: HelpButton(
+                          compact: true,
+                          title: s.hysteresisHelpTitle,
+                          body: s.hysteresisHelpBody,
+                        )),
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true, signed: false),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 FormBuilderCheckbox(
                   name: 'activeLow',
@@ -649,69 +665,73 @@ class _MappingFormPageState extends State<_MappingFormPage> {
                 ]),
               ],
 
-              const SizedBox(height: 16),
-              // ── Analog scaling ─────────────────────────────────────────────
-              _sectionHeader(s.analogScalingSection,
-                  helpTitle: s.analogScalingHelpTitle,
-                  helpBody: s.analogScalingHelpBody),
-              SwitchListTile(
-                value: _hasScaling,
-                title: Text(s.applyAnalogScaling),
-                subtitle: Text(s.analogScalingSubtitle),
-                onChanged: (v) => setState(() => _hasScaling = v),
-              ),
-              if (_hasScaling) ...[
-                Row(children: [
-                  Expanded(
-                    child: FormBuilderTextField(
-                      name: 'mapInMin',
-                      initialValue: m?.mapInMin?.toString(),
-                      decoration: InputDecoration(
-                          labelText: s.rawMinLabel,
-                          border: const OutlineInputBorder()),
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true, signed: true),
+              // Analog scaling converts a raw sensor reading into real units,
+              // so it only applies when there is a read sensor.
+              if (_hasRead) ...[
+                const SizedBox(height: 16),
+                // ── Analog scaling ─────────────────────────────────────────────
+                _sectionHeader(s.analogScalingSection,
+                    helpTitle: s.analogScalingHelpTitle,
+                    helpBody: s.analogScalingHelpBody),
+                SwitchListTile(
+                  value: _hasScaling,
+                  title: Text(s.applyAnalogScaling),
+                  subtitle: Text(s.analogScalingSubtitle),
+                  onChanged: (v) => setState(() => _hasScaling = v),
+                ),
+                if (_hasScaling) ...[
+                  Row(children: [
+                    Expanded(
+                      child: FormBuilderTextField(
+                        name: 'mapInMin',
+                        initialValue: m?.mapInMin?.toString(),
+                        decoration: InputDecoration(
+                            labelText: s.rawMinLabel,
+                            border: const OutlineInputBorder()),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true, signed: true),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FormBuilderTextField(
-                      name: 'mapInMax',
-                      initialValue: m?.mapInMax?.toString(),
-                      decoration: InputDecoration(
-                          labelText: s.rawMaxLabel,
-                          border: const OutlineInputBorder()),
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true, signed: true),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FormBuilderTextField(
+                        name: 'mapInMax',
+                        initialValue: m?.mapInMax?.toString(),
+                        decoration: InputDecoration(
+                            labelText: s.rawMaxLabel,
+                            border: const OutlineInputBorder()),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true, signed: true),
+                      ),
                     ),
-                  ),
-                ]),
-                const SizedBox(height: 8),
-                Row(children: [
-                  Expanded(
-                    child: FormBuilderTextField(
-                      name: 'mapOutMin',
-                      initialValue: m?.mapOutMin?.toString(),
-                      decoration: InputDecoration(
-                          labelText: s.displayMinLabel,
-                          border: const OutlineInputBorder()),
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true, signed: true),
+                  ]),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(
+                      child: FormBuilderTextField(
+                        name: 'mapOutMin',
+                        initialValue: m?.mapOutMin?.toString(),
+                        decoration: InputDecoration(
+                            labelText: s.displayMinLabel,
+                            border: const OutlineInputBorder()),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true, signed: true),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FormBuilderTextField(
-                      name: 'mapOutMax',
-                      initialValue: m?.mapOutMax?.toString(),
-                      decoration: InputDecoration(
-                          labelText: s.displayMaxLabel,
-                          border: const OutlineInputBorder()),
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true, signed: true),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FormBuilderTextField(
+                        name: 'mapOutMax',
+                        initialValue: m?.mapOutMax?.toString(),
+                        decoration: InputDecoration(
+                            labelText: s.displayMaxLabel,
+                            border: const OutlineInputBorder()),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true, signed: true),
+                      ),
                     ),
-                  ),
-                ]),
+                  ]),
+                ],
               ],
 
               const SizedBox(height: 24),
@@ -753,10 +773,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         DropdownButtonFormField<String?>(
-          value: currentValue,
+          initialValue: currentValue,
           decoration: InputDecoration(
-              labelText: s.selectParameter,
-              border: const OutlineInputBorder()),
+              labelText: s.selectParameter, border: const OutlineInputBorder()),
           items: params
               .map((p) => DropdownMenuItem(value: p.name, child: Text(p.name)))
               .toList(),
@@ -795,7 +814,9 @@ class _MappingFormPageState extends State<_MappingFormPage> {
   void _submit() {
     if (_scope == 'zone' && _selectedZoneId == null) return;
     if (_scope == 'flowerpot' &&
-        (_selectedZoneId == null || _selectedFlowerpotId == null)) return;
+        (_selectedZoneId == null || _selectedFlowerpotId == null)) {
+      return;
+    }
 
     if (_selectedParamName == null) {
       setState(() => _paramError = true);
@@ -835,8 +856,7 @@ class _MappingFormPageState extends State<_MappingFormPage> {
       muxSelPins: useMux ? muxSelPins : [],
       writeDeviceId: _hasWrite ? _selectedWriteDeviceId : null,
       direction: _hasWrite ? f['direction']?.value as String? : null,
-      hysteresis:
-          _hasWrite ? double.tryParse(raw('hysteresis') ?? '') : null,
+      hysteresis: _hasWrite ? double.tryParse(raw('hysteresis') ?? '') : null,
       activeLow: _hasWrite ? f['activeLow']?.value as bool? : null,
       outputMode: _hasWrite ? f['outputMode']?.value as String? : null,
       minOnMs: _hasWrite ? int.tryParse(raw('minOnMs') ?? '') : null,

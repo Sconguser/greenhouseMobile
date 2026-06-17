@@ -114,11 +114,21 @@ class HttpService {
   http.Response _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response;
-    } else {
-      throw HttpException(
-        statusCode: response.statusCode,
-        message: jsonDecode(response.body)['message'] ?? 'Unknown error',
-      );
     }
+    // Error bodies aren't always JSON (e.g. plain-text 5xx, HTML error pages,
+    // or an empty body). Parse defensively so a non-JSON body surfaces as a
+    // readable message instead of a FormatException.
+    String message;
+    try {
+      final decoded = jsonDecode(response.body);
+      message = (decoded is Map && decoded['message'] != null)
+          ? decoded['message'].toString()
+          : response.body;
+    } catch (_) {
+      message = response.body.isNotEmpty
+          ? response.body
+          : 'HTTP ${response.statusCode}';
+    }
+    throw HttpException(statusCode: response.statusCode, message: message);
   }
 }

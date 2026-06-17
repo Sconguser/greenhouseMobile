@@ -926,6 +926,7 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                 children: [
                   const SizedBox(height: 5),
                   FormBuilderTextField(
+                    key: const ValueKey('name'),
                     name: 'name',
                     decoration: InputDecoration(
                       labelText: S.of(context).parameterNameLabel,
@@ -935,53 +936,9 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                         errorText: S.of(context).authThisFieldCannotBeEmpty),
                   ),
                   buildSizedBoxBetweenInputs(),
-                  // Toggle parameters are implicitly 0/1 and unitless, so the
-                  // min/max and unit fields only apply to Value parameters.
-                  if (_type == ParameterType.VALUE) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FormBuilderTextField(
-                            name: 'min',
-                            initialValue: '0',
-                            decoration: InputDecoration(
-                              labelText: S.of(context).parameterMinLabel,
-                              border: const OutlineInputBorder(),
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true, signed: true),
-                            validator: FormBuilderValidators.numeric(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: FormBuilderTextField(
-                            name: 'max',
-                            initialValue: '100',
-                            decoration: InputDecoration(
-                              labelText: S.of(context).parameterMaxLabel,
-                              border: const OutlineInputBorder(),
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true, signed: true),
-                            validator: FormBuilderValidators.numeric(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    buildSizedBoxBetweenInputs(),
-                    FormBuilderTextField(
-                      name: 'unit',
-                      decoration: InputDecoration(
-                        labelText: S.of(context).parameterUnitLabel,
-                        border: const OutlineInputBorder(),
-                      ),
-                      maxLength: 8,
-                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                    ),
-                    buildSizedBoxBetweenInputs(),
-                  ],
+                  // Pick the type first — it decides which fields below apply.
                   FormBuilderRadioGroup<ParameterType>(
+                    key: const ValueKey('parameterType'),
                     name: 'parameterType',
                     decoration: InputDecoration(
                       labelText: S.of(context).parameterTypeLabel,
@@ -1001,16 +958,67 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                   ),
                   buildSizedBoxBetweenInputs(),
                   FormBuilderCheckbox(
+                    key: const ValueKey('mutable'),
                     name: 'mutable',
                     title: Text(S.of(context).parameterMutableLabel),
                     initialValue: true,
                     onChanged: (val) =>
                         setState(() => _isMutable = val ?? true),
                   ),
+                  // Toggle parameters are implicitly 0/1 and unitless, so the
+                  // min/max and unit fields only apply to Value parameters.
+                  if (_type == ParameterType.VALUE) ...[
+                    buildSizedBoxBetweenInputs(),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FormBuilderTextField(
+                            key: const ValueKey('min'),
+                            name: 'min',
+                            initialValue: '0',
+                            decoration: InputDecoration(
+                              labelText: S.of(context).parameterMinLabel,
+                              border: const OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true, signed: true),
+                            validator: FormBuilderValidators.numeric(),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FormBuilderTextField(
+                            key: const ValueKey('max'),
+                            name: 'max',
+                            initialValue: '100',
+                            decoration: InputDecoration(
+                              labelText: S.of(context).parameterMaxLabel,
+                              border: const OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true, signed: true),
+                            validator: FormBuilderValidators.numeric(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    buildSizedBoxBetweenInputs(),
+                    FormBuilderTextField(
+                      key: const ValueKey('unit'),
+                      name: 'unit',
+                      decoration: InputDecoration(
+                        labelText: S.of(context).parameterUnitLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      maxLength: 8,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                    ),
+                  ],
                   if (_isMutable) ...[
                     buildSizedBoxBetweenInputs(),
                     if (_type == ParameterType.TOGGLE)
                       FormBuilderSwitch(
+                        key: const ValueKey('requestedToggle'),
                         name: 'requestedToggle',
                         initialValue: false,
                         title: Text(S.of(context).parameterInitialStateLabel),
@@ -1020,6 +1028,7 @@ class _ParameterFormState extends ConsumerState<ParameterForm> {
                       )
                     else
                       FormBuilderTextField(
+                        key: const ValueKey('requestedValue'),
                         name: 'requestedValue',
                         initialValue: '0',
                         decoration: InputDecoration(

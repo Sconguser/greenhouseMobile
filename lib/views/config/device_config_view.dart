@@ -227,9 +227,6 @@ class _DeviceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final extra = StringBuffer('${device.driver} · pin ${device.pin}');
     if (device.driver == 'digital') extra.write(' · ${device.type}');
-    if (device.minValue != null) {
-      extra.write(' · ${device.minValue}–${device.maxValue}');
-    }
     return Card(
       child: ListTile(
         leading: const Icon(Icons.settings_input_component),
@@ -346,34 +343,6 @@ class _DeviceFormState extends State<_DeviceForm> {
                   FormBuilderValidators.integer(),
                 ]),
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: FormBuilderTextField(
-                      name: 'minValue',
-                      initialValue: widget.initial?.minValue?.toString(),
-                      decoration: InputDecoration(
-                          labelText: s.minValueOptionalLabel,
-                          border: const OutlineInputBorder()),
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true, signed: true),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FormBuilderTextField(
-                      name: 'maxValue',
-                      initialValue: widget.initial?.maxValue?.toString(),
-                      decoration: InputDecoration(
-                          labelText: s.maxValueOptionalLabel,
-                          border: const OutlineInputBorder()),
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true, signed: true),
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _submit,
@@ -397,10 +366,6 @@ class _DeviceFormState extends State<_DeviceForm> {
       driver: _selectedDriver,
       type: _isDigital ? f['type']!.value as String : 'value',
       pin: int.parse(f['pin']!.value as String),
-      minValue: double.tryParse(
-          (f['minValue']?.value as String? ?? '').trim()),
-      maxValue: double.tryParse(
-          (f['maxValue']?.value as String? ?? '').trim()),
     ));
     Navigator.of(context).pop();
   }

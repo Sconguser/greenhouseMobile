@@ -235,8 +235,6 @@
     "driverLabel":"Sterownik",
     "typeLabel":"Typ",
     "gpioPinLabel":"Pin GPIO",
-    "minValueOptionalLabel":"Wartość minimalna (opcjonalnie)",
-    "maxValueOptionalLabel":"Wartość maksymalna (opcjonalnie)",
 
     "mappingsTitle":"Mapowania — {name}",
     "noMappingsYet":"Brak skonfigurowanych mapowań.",

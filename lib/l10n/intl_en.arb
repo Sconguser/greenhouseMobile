@@ -235,8 +235,6 @@
     "driverLabel":"Driver",
     "typeLabel":"Type",
     "gpioPinLabel":"GPIO pin",
-    "minValueOptionalLabel":"Min value (optional)",
-    "maxValueOptionalLabel":"Max value (optional)",
 
     "mappingsTitle":"Mappings — {name}",
     "noMappingsYet":"No mappings configured yet.",
